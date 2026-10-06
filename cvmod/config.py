@@ -81,6 +81,36 @@ VPK_PATH = DIST / f"{ADDON_NAME}.vpk"
 # Where generated flat textures live inside the addon.
 FLAT_MATERIAL_DIR = "models/cvmod"
 
+# Shot traces. Not a class colour, so a frame can separate a bullet path from
+# every infected. Beams using this colour last under a second.
+TRACER_COLOR: tuple[int, int, int] = (255, 0, 128)
+TRACER_SECONDS: float = 0.5
+
+# Listen-server capture settings. Applied by the map script. `exec` cannot read
+# a cfg that only exists inside an addon VPK, so these are not a manual step.
+# `sv_cheats 1` comes first because `fog_override` is marked as a cheat.
+CAPTURE_COMMANDS: list[tuple[str, str]] = [
+    ("sv_cheats", "1"),
+    ("mat_hdr_level", "0"),
+    ("mat_bloomscale", "0"),
+    ("mat_disable_bloom", "1"),
+    ("mat_colorcorrection", "0"),
+    ("mat_motion_blur_enabled", "0"),
+    ("mat_grain_scale_override", "0"),
+    ("mat_antialias", "0"),
+    ("mat_software_aa_strength", "0"),
+    ("mat_specular", "0"),
+    ("r_dynamic", "0"),
+    ("muzzleflash_light", "0"),
+    ("fog_override", "1"),
+    ("fog_enable", "0"),
+    ("r_drawviewmodel", "0"),
+    ("cl_drawhud", "0"),
+    ("net_graph", "0"),
+    ("sv_consistency", "0"),
+    ("sv_pure", "0"),
+]
+
 # Saturated and mutually separable, and far from L4D2's brown/grey palette.
 CLASS_COLORS: dict[str, tuple[int, int, int]] = {
     "common": (255, 0, 255),

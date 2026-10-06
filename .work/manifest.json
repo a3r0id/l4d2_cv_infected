@@ -2,7 +2,7 @@
  "version": 1,
  "entries": {
   "materials/_cfg/cv_capture": {
-   "key": "74a912ddd0db6b81cbc869b9dae7fa65442eb08c18445f0ca2b540e8d7ebe7ba",
+   "key": "b42ecab5e2316b098993a8e41e4b4775de059331ab4f1fd60545a8e17105d115",
    "files": [
     "cfg/cv_capture.cfg"
    ]
@@ -5884,6 +5884,14 @@
    "key": "77515c8fc4fd112a425697585cce7c1bc9d5b1625ca8942192ea8018c7033acd",
    "files": [
     "scripts/vscripts/mapspawn_addon.nut"
+   ]
+  },
+  "scripts/shot_beams": {
+   "key": "16f08c719158af8e808e2e53113cb52d0ae03d98581d49997cf2264ee3fe20ea",
+   "files": [
+    "scripts/vscripts/mapspawn_addon.nut",
+    "materials/sprites/cv_tracer.vmt",
+    "materials/sprites/cv_tracer.vtf"
    ]
   }
  }

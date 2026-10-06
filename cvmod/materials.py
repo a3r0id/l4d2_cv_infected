@@ -262,49 +262,23 @@ def _render_vmt(params: dict[str, str]) -> str:
     return "\n".join(lines)
 
 
-CAPTURE_CFG = """\
-// cv_capture.cfg - run with: exec cv_capture
-//
-// The infected materials are unlit, but Source still gamma-corrects and
-// tonemaps the frame. These settings flatten post-processing so sampled pixels
-// stay close to the authored RGB values.
-
-mat_hdr_level 0
-mat_bloomscale 0
-mat_disable_bloom 1
-mat_colorcorrection 0
-mat_motion_blur_enabled 0
-mat_grain_scale_override 0
-mat_antialias 0
-mat_software_aa_strength 0
-mat_specular 0
-r_dynamic 0
-muzzleflash_light 0
-
-// No fog tinting the flat colours.
-fog_override 1
-fog_enable 0
-
-// Keep the frame clear of anything that is not an infected.
-r_drawviewmodel 0
-cl_drawhud 0
-net_graph 0
-
-// Local servers only: allow the addon's modified content.
-sv_consistency 0
-sv_pure 0
-
-// Shot paths are drawn by scripts/vscripts/mapspawn_addon.nut (listen host,
-// pink, a few seconds). They are separate from this cfg.
-//   script CVShotLinesEnabled <- false
-
-echo "[cv_infected] capture settings applied"
-"""
+def _capture_cfg() -> str:
+    """Same commands the map script applies. Kept so the values are visible on disk."""
+    lines = [
+        "// Applied automatically when a map loads (scripts/vscripts/mapspawn_addon.nut).",
+        "// exec cannot see this file inside an addon VPK.",
+        "",
+    ]
+    lines.extend(f"{name} {value}" for name, value in config.CAPTURE_COMMANDS)
+    lines.append("")
+    lines.append('echo "[cv_infected] capture settings applied"')
+    lines.append("")
+    return "\n".join(lines)
 
 
 def write_capture_cfg(mani: manifest.Manifest, force: bool = False) -> bool:
     out = config.BUILD / "cfg" / "cv_capture.cfg"
-    data = CAPTURE_CFG.encode("utf-8")
+    data = _capture_cfg().encode("utf-8")
     key = manifest.sha(GENERATOR_VERSION, data)
     unit = "materials/_cfg/cv_capture"
     if not force and mani.is_current(unit, key) and out.exists():

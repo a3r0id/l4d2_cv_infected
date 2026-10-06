@@ -3,6 +3,8 @@
 Customizable Left 4 Dead 2 addon that modifies the infected models to make them easier to see.
 Also makes spitter puddles visible through walls and makes tracers easier to see.
 
+While this does not break TOS and uses the official SDK, this will work in servers that allow custom addons (sv_cheats 1), while also bypassing the infected model integrity checks.
+
 Model overrides directly represent the hitboxes of the infected models.
 
 <img width="2560" height="1437" alt="image" src="https://github.com/user-attachments/assets/0ac03cbd-5a4d-46ca-ae2d-054570b95012" />
@@ -25,6 +27,12 @@ Special infected are one color per class. Every common infected, including the L
 | spitter | 0, 255, 128 | Spitter |
 | witch | 255, 255, 255 | Witch and witch bride |
 | gibs | 128, 0, 255 | Severed limbs and gibs |
+
+## Installation
+
+1. Simply move [the addon](dist\cv_infected.vpk) into your `left4dead2/addons/` folder.
+
+2. Enable the addon in the game options.
 
 ## Customization
 
@@ -64,13 +72,9 @@ Colors live in `cvmod/config.py` (`CLASS_COLORS`). After editing them, run `pyth
 
 ## In game
 
-Enable **CV Infected Override** under Extras, then Add-ons. Restart the game after installing the addon; a running game keeps the previous VPK loaded. In the console:
+Enable **CV Infected Override** under Extras, then Add-ons. Restart the game after installing the addon; a running game keeps the previous VPK loaded.
 
-```
-exec cv_capture
-```
-
-That turns off HDR, bloom, color correction, film grain, and fog so the framebuffer stays close to the authored RGB. It also sets `sv_pure 0` and `sv_consistency 0`, which a listen server needs in order to load the addon models.
+When a map loads, the addon turns off HDR, bloom, color correction, film grain, fog, the viewmodel, and the HUD, and sets `sv_pure 0` and `sv_consistency 0`. `exec cv_capture` cannot see a config stored inside the addon, so this is not a console step. The console prints `[cv_infected] capture settings applied` once the map is up.
 
 The addon has to load. If another addon ships its own `models/infected/*.mdl`, only one of them wins.
 
@@ -84,4 +88,4 @@ The addon has to load. If another addon ships its own `models/infected/*.mdl`, o
 
 - When the spitter plays the spitting animation, it lies flat on the ground.
 
-- Some backdrops make it hard to see infected. Also, proxy textures, like text on walls, usually have a higher priority than the override materials, so they can obscure the infected. The `cv_capture` console command helps with that.
+- Some backdrops make it hard to see infected. Also, proxy textures, like text on walls, usually have a higher priority than the override materials, so they can obscure the infected. The capture settings applied on map load turn off the post-processing that makes this worse.

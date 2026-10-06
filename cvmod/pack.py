@@ -15,7 +15,7 @@ ADDONINFO = """\
 	addonversion		"1.0"
 	addontagline		"Flat x-ray infected for computer vision"
 	addonauthor			"cvmod pipeline"
-	addondescription	"Replaces every infected material with a flat, unlit, depth-ignoring colour, one per infected class, so frames can be segmented by exact pixel colour. Survivors, weapons and world geometry are untouched."
+	addondescription	"Replaces every infected material with a flat, unlit, depth-ignoring colour, one per infected class, so frames can be segmented by exact pixel colour."
 
 	addonContent_Skin			1
 	addonContent_CommonInfected	1

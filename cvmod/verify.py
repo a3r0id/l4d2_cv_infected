@@ -153,9 +153,13 @@ def run(idx: index_mod.Index, check_textures: bool = True) -> Report:
     report.add("cv_capture.cfg present", cfg.exists(), str(cfg) if not cfg.exists() else "")
     shotlines = config.BUILD / "scripts" / "vscripts" / "mapspawn_addon.nut"
     shotline_text = shotlines.read_text(encoding="utf-8") if shotlines.exists() else ""
+    tracer_vmt = config.BUILD / "materials" / "sprites" / "cv_tracer.vmt"
     report.add(
         "shot-line script present",
-        "OnGameEvent_bullet_impact" in shotline_text and "DebugDrawLine" in shotline_text,
+        "OnGameEvent_bullet_impact" in shotline_text
+        and "env_beam" in shotline_text
+        and "mat_hdr_level" in shotline_text
+        and tracer_vmt.exists(),
         str(shotlines) if not shotlines.exists() else "",
     )
 
