@@ -8,8 +8,10 @@
 //   script CVShotLinesEnabled <- false
 //   script CVShotLinesEnabled <- true
 
-::CVShotLinesEnabled <- true
-::CVShotLinesTime <- 0.50
+if (!("CVShotLinesEnabled" in getroottable()))
+	::CVShotLinesEnabled <- true
+if (!("CVShotLinesTime" in getroottable()))
+	::CVShotLinesTime <- 0.50
 
 ::CVProjectileClasses <- [
 	"grenade_launcher_projectile",
@@ -18,10 +20,14 @@
 	"vomitjar_projectile"
 ]
 
-::CVProjLast <- {}
-::CVShotLinesThinking <- false
-::CVCaptureLeft <- 0
-::CVCaptureAt <- 0.0
+if (!("CVProjLast" in getroottable()))
+	::CVProjLast <- {}
+if (!("CVShotLinesThinking" in getroottable()))
+	::CVShotLinesThinking <- false
+if (!("CVCaptureLeft" in getroottable()))
+	::CVCaptureLeft <- 0
+if (!("CVCaptureAt" in getroottable()))
+	::CVCaptureAt <- 0.0
 
 function CV_Life() {
 	local life = ::CVShotLinesTime
@@ -49,22 +55,26 @@ function CV_Draw(a, b) {
 	if ((dx * dx) + (dy * dy) + (dz * dz) < 1.0)
 		return
 	local life = CV_Life()
+	// Host overlay. This one does not depend on a material being precached.
+	DebugDrawLine(a, b, 255, 0, 128, true, life)
 	local name = UniqueString("cv_shot")
 	local startName = name + "_a"
 	local endName = name + "_b"
 	SpawnEntityFromTable("info_target", { targetname = startName, origin = a })
 	SpawnEntityFromTable("info_target", { targetname = endName, origin = b })
+	// Stock beam material, already in the game, so the line is in the frame
+	// a capture samples. rendermode 5 is additive, which laserbeam requires.
 	local beam = SpawnEntityFromTable("env_beam", {
 		targetname = name,
 		origin = a,
 		LightningStart = startName,
 		LightningEnd = endName,
-		rendercolor = "255 255 255",
+		rendercolor = "255 0 128",
 		renderamt = "255",
-		rendermode = "0",
-		BoltWidth = "4",
+		rendermode = "5",
+		BoltWidth = "2",
 		life = life.tostring(),
-		texture = "sprites/cv_tracer",
+		texture = "sprites/laserbeam.spr",
 		TextureScroll = "0",
 		framestart = "0",
 		StrikeTime = "0",
@@ -73,7 +83,7 @@ function CV_Draw(a, b) {
 		damage = "0"
 	})
 	if (beam != null && NetProps.HasProp(beam, "m_nRenderMode"))
-		NetProps.SetPropInt(beam, "m_nRenderMode", 0)
+		NetProps.SetPropInt(beam, "m_nRenderMode", 5)
 	EntFire(name, "TurnOn")
 	EntFire(name, "Kill", "", life)
 	EntFire(startName, "Kill", "", life)
@@ -202,7 +212,13 @@ function OnGameEvent_round_start(params) {
 	CV_QueueCapture()
 }
 
-__CollectEventCallbacks(this, "OnGameEvent_", "GameEventCallbacks", RegisterScriptGameEventListener)
+try {
+	__CollectEventCallbacks(this, "OnGameEvent_", "GameEventCallbacks", RegisterScriptGameEventListener)
+} catch (err) {
+	RegisterScriptGameEventListener("bullet_impact")
+	RegisterScriptGameEventListener("round_start")
+	printl("[cv_infected] event hook fallback (" + err + ")")
+}
 try {
 	CV_StartShotLines()
 } catch (err) {

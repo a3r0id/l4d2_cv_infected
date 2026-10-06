@@ -1,11 +1,12 @@
 Cable
 {
-	$basetexture       "models/cvmod/flat_smoker"
-	$translucent       "0"
-	$vertexcolor       "0"
-	$nocull            "1"
-	$spriteorientation "parallel_upright"
-	$ignorez           "1"
-	$nofog             "1"
-	$vertexalpha       "0"
+	$basetexture            "models/cvmod/flat_smoker"
+	$translucent            "0"
+	$vertexcolor            "0"
+	$nocull                 "1"
+	$spriteorientation      "parallel_upright"
+	$ignorez                "1"
+	$nofog                  "1"
+	$vertexalpha            "0"
+	$allowdiffusemodulation "0"
 }

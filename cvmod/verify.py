@@ -81,7 +81,18 @@ def run(idx: index_mod.Index, check_textures: bool = True) -> Report:
     allowed = ("models/infected/", config.FLAT_MATERIAL_DIR + "/")
     puddle = set(config.SPITTER_PUDDLE_MATERIALS)
     tongue = set(config.SMOKER_TONGUE_MATERIALS)
-    strays = sorted(k for k in built if not k.startswith(allowed) and k not in puddle and k not in tongue)
+    tracers = set(config.TRACER_MATERIALS)
+    # Listen-server beam texture. It is not an infected material.
+    shot_sprite = {"sprites/cv_tracer"}
+    strays = sorted(
+        k
+        for k in built
+        if not k.startswith(allowed)
+        and k not in puddle
+        and k not in tongue
+        and k not in tracers
+        and k not in shot_sprite
+    )
     report.add(
         "no materials outside models/infected",
         not strays,
@@ -97,6 +108,9 @@ def run(idx: index_mod.Index, check_textures: bool = True) -> Report:
     tongue_bad: list[str] = []
     tongue_seen: set[str] = set()
     smoker_texture = f"{config.FLAT_MATERIAL_DIR}/flat_smoker"
+    tracer_texture = f"{config.FLAT_MATERIAL_DIR}/flat_tracer"
+    tracer_bad: list[str] = []
+    tracer_seen: set[str] = set()
     for key, path in sorted(built.items()):
         try:
             shader, body = vmt.parse_text(path.read_text(encoding="utf-8"))
@@ -117,10 +131,25 @@ def run(idx: index_mod.Index, check_textures: bool = True) -> Report:
             if ignorez in ("", "0") or ref.lower() != smoker_texture:
                 tongue_bad.append(f"{key} -> {ref or '<none>'} ignorez={ignorez or '0'}")
             continue
+        if key in shot_sprite:
+            continue
+        if key in tracers:
+            tracer_seen.add(key)
+            ref = params.get("$basetexture", "").strip().strip('"').replace("\\", "/")
+            if ref.lower() != tracer_texture:
+                tracer_bad.append(f"{key} -> {ref or '<none>'}")
+            continue
         shaders.add(shader)
         ref = params.get("$basetexture", "")
         if not ref or not (materials_root / f"{ref}.vtf").exists():
             dangling.append(f"{key} -> {ref or '<none>'}")
+        warp = params.get("$lightwarptexture", "").strip().strip('"').replace("\\", "/")
+        if warp and not (materials_root / f"{warp}.vtf").exists():
+            dangling.append(f"{key} lightwarp -> {warp}")
+        if params.get("$disablevariation", "").strip().strip('"') != "1":
+            dangling.append(f"{key} missing $disablevariation 1")
+        if params.get("$allowdiffusemodulation", "").strip().strip('"') != "0":
+            dangling.append(f"{key} missing $allowdiffusemodulation 0")
     report.add("every generated VMT parses", not bad_syntax, "\n".join(bad_syntax[:10]))
     report.add(
         "every $basetexture resolves inside the addon",
@@ -128,8 +157,8 @@ def run(idx: index_mod.Index, check_textures: bool = True) -> Report:
         "\n".join(dangling[:10]),
     )
     report.add(
-        "all overrides use a single unlit shader",
-        shaders == {"UnlitGeneric"},
+        "infected materials use the infected shader",
+        shaders == {"VertexLitGeneric"},
         f"shaders found: {sorted(shaders)}",
     )
     missing_puddle = [k for k in config.SPITTER_PUDDLE_MATERIALS if k not in puddle_seen]
@@ -143,6 +172,12 @@ def run(idx: index_mod.Index, check_textures: bool = True) -> Report:
         "smoker tongue uses the smoker colour",
         not tongue_bad and not missing_tongue,
         "\n".join(tongue_bad + [f"missing {k}" for k in missing_tongue]),
+    )
+    missing_tracer = [k for k in config.TRACER_MATERIALS if k not in tracer_seen]
+    report.add(
+        "bullet tracers use the tracer colour",
+        not tracer_bad and not missing_tracer,
+        "\n".join(tracer_bad + [f"missing {k}" for k in missing_tracer]),
     )
 
     # 5. Valve's own reader accepts every generated texture.

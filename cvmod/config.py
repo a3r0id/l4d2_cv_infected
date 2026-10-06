@@ -184,16 +184,62 @@ MODEL_CLASS_PREFIXES: list[tuple[str, str]] = [
     ("cim_", "common"),
 ]
 
-# Flat render flags stamped onto every generated VMT.
+# Flat render flags stamped onto every generated infected VMT.
+# L4D2's infected shader is VertexLitGeneric. It recolors each common from a
+# clothing gradient and from the entity color. Those knobs exist only on this
+# shader: UnlitGeneric ignores them, which is why commons stayed red, blue,
+# and black. A white lightwarp flattens the lighting so the baked RGB survives.
 RENDER_FLAGS: dict[str, str] = {
+    "$model": "1",
     "$ignorez": "1",
     "$nocull": "1",
     "$nofog": "1",
-    "$vertexcolor": "0",
-    "$vertexalpha": "0",
     "$nodecal": "1",
-    "$receiveflashlight": "0",
+    "$halflambert": "0",
+    "$phong": "0",
+    "$ambientocclusion": "0",
+    "$shinyblood": "0",
+    "$burning": "0",
+    "$wounded": "0",
+    "$eyeglow": "0",
+    "$disablevariation": "1",
+    "$allowdiffusemodulation": "0",
+    "$blendtintbybasealpha": "0",
+    "$basecolortint": "[1 1 1]",
+    "$lightwarptexture": f"{FLAT_MATERIAL_DIR}/flat_lightwarp",
 }
+
+LIGHTWARP_COLOR: tuple[int, int, int] = (255, 255, 255)
+
+# Bullet streaks the client already draws. Recolouring them is what shows a
+# shot on a public server. The listen-server script cannot run there.
+TRACER_MATERIALS: tuple[str, ...] = (
+    "particle/particle_glow_05_additive",
+    "sprites/laserbeam",
+)
+
+# Client settings. Written to the game's cfg folder on deploy, then exec'd
+# from autoexec, so they apply on any server. Server cvars are not in here.
+CLIENT_COMMANDS: tuple[tuple[str, str], ...] = (
+    ("r_drawtracers", "1"),
+    ("r_drawtracers_firstperson", "1"),
+    ("z_do_tracers", "1"),
+    ("z_tracer_spacing", "1"),
+    ("mat_hdr_level", "0"),
+    ("mat_bloomscale", "0"),
+    ("mat_disable_bloom", "1"),
+    ("mat_colorcorrection", "0"),
+    ("mat_motion_blur_enabled", "0"),
+    ("mat_grain_scale_override", "0"),
+    ("mat_antialias", "0"),
+    ("mat_software_aa_strength", "0"),
+    ("mat_specular", "0"),
+    ("r_dynamic", "0"),
+    ("muzzleflash_light", "0"),
+    ("r_drawviewmodel", "0"),
+    ("cl_drawhud", "0"),
+    ("net_graph", "0"),
+)
 
 # Materials that must keep their alpha cutout instead of becoming solid quads.
 # Relative to materials/, forward slashes, lowercase, no extension.

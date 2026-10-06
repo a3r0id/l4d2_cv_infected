@@ -38,13 +38,13 @@ Special infected are one color per class. Every common infected, including the L
 | tracer  | 255, 0, 128   | Each shot, for half a second. Not an infected class |
 
 
-The color is baked into the texture. It is not a lighting tint, so a sampled pixel is that RGB when post-processing is off.
+The color is baked into the texture. L4D2's infected shader still recolors each common unless the material turns that off, which is why some stayed red, blue, or black. These materials set `$disablevariation 1` and `$allowdiffusemodulation 0` on `VertexLitGeneric`, and a white lightwarp keeps the lighting from shifting the RGB.
 
 Colors live in `cvmod/config.py` (`CLASS_COLORS` and `TRACER_COLOR`). After editing them, run `make colors`.
 
 ## What gets replaced
 
-1. **Materials.** Every infected VMT is replaced with an unlit material (`$ignorez`, `$nocull`, `$nofog`). Infected draw through walls and ignore fog.
+1. **Materials.** Every infected VMT is replaced with a flat `VertexLitGeneric` material (`$ignorez`, `$nocull`, `$nofog`, variation disabled). Infected draw through walls and ignore fog.
 2. **Meshes.** Each infected model is recompiled as boxes built from its own hitboxes, so the silhouette is the volume bullets actually test. Animations, grabs, and hitboxes are copied from the original model.
 3. **Shots.** Each survivor bullet becomes a beam from the eyes to the server impact. A hit ends on the hitbox. A miss ends on the world. Grenades, molotovs, pipe bombs, and bile jars get the same beam while they fly. Beams last 0.5 seconds and use the tracer color, so a frame can score a hit when that color meets a class color.
 
@@ -64,11 +64,19 @@ That finds the Steam install of Left 4 Dead 2, packs `dist/cv_infected.vpk`, and
 
 Close the game before deploying. A running game locks the VPK, and it keeps whatever addon it loaded at startup. Quit fully, then launch again.
 
-You can also copy [the addon](dist/cv_infected.vpk) into `left4dead2/addons/` yourself. `make deploy` does that copy for you.
-
 ## Building
 
-Run these from this directory. `make help` prints the same list. The game install is found through Steam, or from `L4D2_DIR` if you set that to the folder containing `left4dead2.exe`. Extracted assets need to be in `l4d2/`.
+First, you'll need to extract the assets from the game.
+
+```
+python extract.py
+```
+
+This will create a `l4d2` folder with the extracted assets.
+
+Then, you can build the addon.
+
+Run these from this directory. `make help` prints the same list.
 
 
 | Command                   | What it does                                                                |
@@ -91,21 +99,18 @@ Unchanged files are skipped. Another addon that ships its own `models/infected/*
 
 ## In game
 
-When a map loads, the addon applies the capture settings itself. There is no `exec` step. A config inside the addon VPK is invisible to `exec`.
+This is a client addon. It works on public servers that allow addons. Nothing here has to be hosted by you.
 
-That turns cheats on, then turns off HDR, bloom, color correction, film grain, fog, the viewmodel, and the HUD. It also sets `sv_pure 0` and `sv_consistency 0`, which a listen server needs in order to load the addon models. The console prints `[cv_infected] capture settings applied` once the map is up.
+Quit the game fully after installing. A running game keeps the addon it loaded at startup. In Extras, then Add-ons, **CV Infected Override** should say version **1.3**.
 
-Shot beams can be toggled from the console:
+`make deploy` writes `left4dead2/cfg/cv_client.cfg` and runs it from `autoexec.cfg` and from the end of `valve.rc`. That turns on your own bullet tracers and the flat capture settings the next time the game starts. A config inside the addon cannot do that. The console prints `[cv_infected] client settings applied` when it runs.
 
-```
-script CVShotLinesEnabled <- false
-script CVShotLinesEnabled <- true
-```
+Shots use the tracers the game already draws, recolored to **255, 0, 128**, from the muzzle to the impact. First-person tracers are off until `cv_client.cfg` runs.
 
 
 
 ## Known Issues
 
 - When the spitter plays the spitting animation, it's model lies flat on the ground. Oddly enough, this seems to be true to the hitbox so it might be a win. Similar case with the Jockey when it's riding a survivor.
-- Some backdrops make it hard to see infected. Also, proxy textures, like text on walls, usually have a higher priority than the override materials, so they can obscure the infected. The capture settings applied on map load turn off the post-processing that makes this worse.
+- Some backdrops make it hard to see infected. Also, proxy textures, like text on walls, usually have a higher priority than the override materials, so they can obscure the infected. The client settings applied at startup turn off the post-processing that makes this worse.
 

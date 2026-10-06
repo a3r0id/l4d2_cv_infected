@@ -12,7 +12,7 @@ ADDONINFO = """\
 "AddonInfo"
 {
 	addontitle			"CV Infected Override"
-	addonversion		"1.0"
+	addonversion		"1.3"
 	addontagline		"Flat x-ray infected for computer vision"
 	addonauthor			"cvmod pipeline"
 	addondescription	"Replaces every infected material with a flat, unlit, depth-ignoring colour, one per infected class, so frames can be segmented by exact pixel colour."
@@ -109,7 +109,50 @@ def deploy(loose: bool = False) -> list[Path]:
             ) from exc
         written.append(vpk_target)
 
+    written.extend(install_client_cfg())
     return written
+
+
+def install_client_cfg() -> list[Path]:
+    """Put client settings in the real cfg folder.
+
+    A cfg inside the addon VPK cannot be exec'd, and a server script does not
+    run when this addon is only installed on a public-server client.
+    """
+    cfg_dir = config.GAME_DIR / "cfg"
+    cfg_dir.mkdir(parents=True, exist_ok=True)
+    body = [
+        "// cv_infected client settings. Applied from autoexec and valve.rc.",
+        "// First-person tracers stay off until this file runs.",
+        "",
+    ]
+    body.extend(f"{name} {value}" for name, value in config.CLIENT_COMMANDS)
+    body.append("")
+    body.append('echo "[cv_infected] client settings applied"')
+    body.append("")
+    path = cfg_dir / "cv_client.cfg"
+    path.write_text("\n".join(body), encoding="utf-8")
+
+    autoexec = cfg_dir / "autoexec.cfg"
+    line = "exec cv_client"
+    existing = autoexec.read_text(encoding="utf-8", errors="replace") if autoexec.exists() else ""
+    if line not in existing:
+        suffix = "" if existing.endswith("\n") or not existing else "\n"
+        autoexec.write_text(existing + suffix + line + "\n", encoding="utf-8")
+
+    # valve.rc runs autoexec, then stuffcmds. Launch options stuffed there can
+    # turn the HUD and the viewmodel back on. Running again after that is the
+    # last cfg this file executes.
+    valve = cfg_dir / "valve.rc"
+    valve_text = valve.read_text(encoding="utf-8", errors="replace") if valve.exists() else ""
+    kept = [ln for ln in valve_text.splitlines() if ln.strip() != line]
+    if not kept:
+        kept = ["exec joystick.cfg", "exec autoexec.cfg", "stuffcmds"]
+    while kept and not kept[-1].strip():
+        kept.pop()
+    kept.append(line)
+    valve.write_text("\n".join(kept) + "\n", encoding="utf-8")
+    return [path, autoexec, valve]
 
 
 GAMEINFO = """\

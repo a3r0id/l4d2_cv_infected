@@ -193,6 +193,9 @@ def build(
         _write_spitter_puddle(mani, force, result)
     if not only or "smoker" in only.lower():
         _write_smoker_tongue(mani, force, result)
+    if not only:
+        _write_lightwarp(mani, force, result)
+        _write_client_tracers(mani, force, result)
 
     if not only:
         # Must run after every unit above has been touched or recorded.
@@ -309,6 +312,7 @@ def _write_smoker_tongue(mani: manifest.Manifest, force: bool, result: Result) -
         params["$vertexcolor"] = "0"
         params["$vertexalpha"] = "0"
         params["$translucent"] = "0"
+        params["$allowdiffusemodulation"] = "0"
         dest = out_materials / f"{key}.vmt"
         width = max(len(name) for name in params)
         lines = [shader, "{"]
@@ -330,9 +334,89 @@ def _write_smoker_tongue(mani: manifest.Manifest, force: bool, result: Result) -
         result.stats.written += 1
 
 
+def _write_lightwarp(mani: manifest.Manifest, force: bool, result: Result) -> None:
+    """White ramp so VertexLitGeneric's lighting term stays 1.
+
+    The infected shader multiplies the texture by this lookup. Every texel is
+    white, so a shaded pixel keeps the baked class color.
+    """
+    out_materials = config.BUILD / "materials"
+    dest = out_materials / f"{config.FLAT_MATERIAL_DIR}/flat_lightwarp.vtf"
+    data = vtf.build(config.LIGHTWARP_COLOR)
+    unit = "materials/_flat/lightwarp"
+    key = manifest.sha(GENERATOR_VERSION, "lightwarp", data)
+    if not force and mani.is_current(unit, key) and dest.exists():
+        mani.touch(unit)
+        result.stats.skipped += 1
+        return
+    manifest.write_if_changed(dest, data)
+    mani.record(unit, key, [dest])
+    result.stats.written += 1
+
+
+def _write_client_tracers(mani: manifest.Manifest, force: bool, result: Result) -> None:
+    """Recolour the bullet streak the client draws for every server.
+
+    `weapon_tracers` stretches particle/particle_glow_05_additive from the
+    muzzle to the impact. sprites/laserbeam is the other streak material.
+    Both have to stay sprite shaders or the particle renderer drops them.
+    """
+    out_materials = config.BUILD / "materials"
+    texture = f"{config.FLAT_MATERIAL_DIR}/flat_tracer"
+    bodies = {
+        "particle/particle_glow_05_additive": (
+            "SpriteCard",
+            {
+                "$basetexture": texture,
+                "$additive": "1",
+                "$translucent": "1",
+                "$ignorez": "1",
+                "$nocull": "1",
+                "$nofog": "1",
+                "$vertexcolor": "0",
+                "$vertexalpha": "1",
+                "$depthblend": "0",
+            },
+        ),
+        "sprites/laserbeam": (
+            "Sprite",
+            {
+                "$spriteorientation": "vp_parallel",
+                "$spriteorigin": "[ 0.50 0.50 ]",
+                "$basetexture": texture,
+                "$additive": "1",
+                "$translucent": "1",
+                "$ignorez": "1",
+                "$nocull": "1",
+                "$nofog": "1",
+                "$vertexcolor": "0",
+                "$vertexalpha": "1",
+            },
+        ),
+    }
+    for key, (shader, params) in bodies.items():
+        unit = f"materials/{key}"
+        dest = out_materials / f"{key}.vmt"
+        width = max(len(name) for name in params)
+        lines = [shader, "{"]
+        for name, value in params.items():
+            lines.append(f'\t{name.ljust(width)} "{value}"')
+        lines.append("}")
+        lines.append("")
+        data = "\n".join(lines).encode("utf-8")
+        unit_key = manifest.sha(GENERATOR_VERSION, "client-tracer", data)
+        if not force and mani.is_current(unit, unit_key) and dest.exists():
+            mani.touch(unit)
+            result.stats.skipped += 1
+            continue
+        manifest.write_if_changed(dest, data)
+        mani.record(unit, unit_key, [dest])
+        result.stats.written += 1
+
+
 def _render_vmt(params: dict[str, str]) -> str:
     width = max(len(k) for k in params)
-    lines = ["UnlitGeneric", "{"]
+    lines = ["VertexLitGeneric", "{"]
     for key, value in params.items():
         lines.append(f'\t{key.ljust(width)} "{value}"')
     lines.append("}")
