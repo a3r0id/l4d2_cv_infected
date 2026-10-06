@@ -10,7 +10,8 @@ My initial goal was to make the infected easier to see for a computer vision pro
 - Player projectiles are temporarily annotated with a 3D line.
 - Post-processing is optimized to provide a clear view of the scene, all without triggering common server-side checks.
 
-While this does not break TOS and uses the official SDK, this will work in servers that allow custom addons (sv_cheats 1), while also bypassing the infected model integrity checks. In other words, this will work just fine on those custom Chinese servers.
+While this does not break TOS and uses the official SDK, this will work in servers that allow custom addons, while also bypassing the infected model integrity checks and.
+In other words, this will work just fine on those custom Chinese servers - aside from script-based things that will only take effect if the server is sv_cheats 1 - Model/material changes will work just fine, however.
 
 Model overrides directly represent the hitboxes of the infected models.
 
