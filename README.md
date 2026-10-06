@@ -4,6 +4,11 @@ Left 4 Dead 2 addon and scripts that modify the infected models to make them eas
 Also adds some useful changes to materials like spitter puddles.
 
 
+<img width="2560" height="1437" alt="image" src="https://github.com/user-attachments/assets/0ac03cbd-5a4d-46ca-ae2d-054570b95012" />
+
+<img width="2561" height="1438" alt="image" src="https://github.com/user-attachments/assets/d1600b86-c593-4655-8d08-abad61e715ff" />
+
+
 
 Special infected are one color per class. Every common infected, including the L4D1 and DLC bodies (police, military, nurse, rural, formal, and the rest), is the same pink.
 
