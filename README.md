@@ -3,7 +3,7 @@
 Left 4 Dead 2 addon and scripts that modify the infected models to make them easier to see.
 Also adds some useful changes to materials like spitter puddles.
 
-
+Model overrides directly represent the hitboxes of the infected models.
 
 Special infected are one color per class. Every common infected, including the L4D1 and DLC bodies (police, military, nurse, rural, formal, and the rest), is the same pink.
 
@@ -23,6 +23,8 @@ Special infected are one color per class. Every common infected, including the L
 | gibs | 128, 0, 255 | Severed limbs and gibs |
 
 The color is baked into the texture. It is not a lighting tint, so a sampled pixel is that RGB when post-processing is off.
+
+This can be configured in the config.py file and rebuilt with the `python main.py materials pack deploy` command.
 
 ## What gets replaced
 
