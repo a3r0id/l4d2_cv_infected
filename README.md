@@ -1,4 +1,4 @@
-# Infected Helper Overrides
+# Infected CV Helper Overrides
 
 Customizable Left 4 Dead 2 addon that modifies the infected models to make them easier to see.
 Also makes spitter puddles visible through walls and draws a short beam along each shot.
