@@ -218,6 +218,13 @@ SPITTER_PUDDLE_MATERIALS: tuple[str, ...] = (
     "particle/droplets/droplets_oriented_add_nodepth",
 )
 
+# The tongue that flies out and can be shot is a rope plus a joint sprite.
+# smoker.mdl does not reference them, so the body override never reaches them.
+SMOKER_TONGUE_MATERIALS: tuple[str, ...] = (
+    "particle/smoker_tongue_beam",
+    "particle/smoker_tongue_joint",
+)
+
 
 def classify_model(stem: str, rel_dirs: tuple[str, ...] = ()) -> str:
     """Map a model onto an infected class.

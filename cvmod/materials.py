@@ -191,6 +191,8 @@ def build(
 
     if not only:
         _write_spitter_puddle(mani, force, result)
+    if not only or "smoker" in only.lower():
+        _write_smoker_tongue(mani, force, result)
 
     if not only:
         # Must run after every unit above has been touched or recorded.
@@ -243,6 +245,82 @@ def _write_spitter_puddle(mani: manifest.Manifest, force: bool, result: Result) 
         text = "\n".join(lines)
         data = text.encode("utf-8")
         unit_key = manifest.sha(GENERATOR_VERSION, "puddle-ignorez", data)
+        if not force and mani.is_current(unit, unit_key) and dest.exists():
+            mani.touch(unit)
+            result.stats.skipped += 1
+            continue
+        manifest.write_if_changed(dest, data)
+        mani.record(unit, unit_key, [dest])
+        result.stats.written += 1
+
+
+def _write_smoker_tongue(mani: manifest.Manifest, force: bool, result: Result) -> None:
+    """Retint the tongue rope and joint to the smoker colour and draw them through walls.
+
+    The shader has to stay Cable or SpriteCard. Those are what the rope and the
+    joint sprite actually render with. Swapping in UnlitGeneric makes the tongue
+    disappear.
+    """
+    out_materials = config.BUILD / "materials"
+    texture = flat_texture_ref("smoker")
+    drop = {
+        "$bumpmap",
+        "$phong",
+        "$phongboost",
+        "$halflambert",
+        "$phongfresnelranges",
+        "$ambientocclusion",
+        "$diffuseexp",
+        "$depthblend",
+    }
+    for key in config.SMOKER_TONGUE_MATERIALS:
+        unit = f"materials/{key}"
+        source = config.SRC_MATERIALS / f"{key}.vmt"
+        if not source.exists():
+            result.errors.append((key, "source vmt missing"))
+            result.stats.failed += 1
+            continue
+        raw = source.read_text(encoding="utf-8", errors="replace")
+        try:
+            shader, body = vmt.parse_text(raw)
+        except vmt.VmtError as exc:
+            result.errors.append((key, str(exc)))
+            result.stats.failed += 1
+            continue
+        params: dict[str, str] = {}
+        for name, value in body:
+            if isinstance(value, list):
+                result.errors.append((key, f"{shader} has a nested block"))
+                result.stats.failed += 1
+                params = {}
+                break
+            lowered = name.lower()
+            if lowered in drop:
+                continue
+            params[lowered] = value
+        if not params and key not in (err for err, _ in result.errors):
+            continue
+        if any(err == key for err, _ in result.errors):
+            continue
+        params["$basetexture"] = texture
+        params["$ignorez"] = "1"
+        params["$nocull"] = "1"
+        params["$nofog"] = "1"
+        params["$vertexcolor"] = "0"
+        params["$vertexalpha"] = "0"
+        params["$translucent"] = "0"
+        dest = out_materials / f"{key}.vmt"
+        width = max(len(name) for name in params)
+        lines = [shader, "{"]
+        for name, value in params.items():
+            shown = str(value)
+            if not (shown.startswith('"') and shown.endswith('"')):
+                shown = f'"{shown}"'
+            lines.append(f"\t{name.ljust(width)} {shown}")
+        lines.append("}")
+        lines.append("")
+        data = "\n".join(lines).encode("utf-8")
+        unit_key = manifest.sha(GENERATOR_VERSION, "smoker-tongue", data)
         if not force and mani.is_current(unit, unit_key) and dest.exists():
             mani.touch(unit)
             result.stats.skipped += 1

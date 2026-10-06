@@ -80,7 +80,8 @@ def run(idx: index_mod.Index, check_textures: bool = True) -> Report:
     # The spitter puddle is a particle material, not an infected model.
     allowed = ("models/infected/", config.FLAT_MATERIAL_DIR + "/")
     puddle = set(config.SPITTER_PUDDLE_MATERIALS)
-    strays = sorted(k for k in built if not k.startswith(allowed) and k not in puddle)
+    tongue = set(config.SMOKER_TONGUE_MATERIALS)
+    strays = sorted(k for k in built if not k.startswith(allowed) and k not in puddle and k not in tongue)
     report.add(
         "no materials outside models/infected",
         not strays,
@@ -93,6 +94,9 @@ def run(idx: index_mod.Index, check_textures: bool = True) -> Report:
     shaders: set[str] = set()
     puddle_bad: list[str] = []
     puddle_seen: set[str] = set()
+    tongue_bad: list[str] = []
+    tongue_seen: set[str] = set()
+    smoker_texture = f"{config.FLAT_MATERIAL_DIR}/flat_smoker"
     for key, path in sorted(built.items()):
         try:
             shader, body = vmt.parse_text(path.read_text(encoding="utf-8"))
@@ -105,6 +109,13 @@ def run(idx: index_mod.Index, check_textures: bool = True) -> Report:
             ignorez = params.get("$ignorez", "").strip().strip('"')
             if ignorez in ("", "0"):
                 puddle_bad.append(f"{key} missing $ignorez")
+            continue
+        if key in tongue:
+            tongue_seen.add(key)
+            ignorez = params.get("$ignorez", "").strip().strip('"')
+            ref = params.get("$basetexture", "").strip().strip('"').replace("\\", "/")
+            if ignorez in ("", "0") or ref.lower() != smoker_texture:
+                tongue_bad.append(f"{key} -> {ref or '<none>'} ignorez={ignorez or '0'}")
             continue
         shaders.add(shader)
         ref = params.get("$basetexture", "")
@@ -126,6 +137,12 @@ def run(idx: index_mod.Index, check_textures: bool = True) -> Report:
         "spitter puddle ignores depth",
         not puddle_bad and not missing_puddle,
         "\n".join(puddle_bad + [f"missing {k}" for k in missing_puddle]),
+    )
+    missing_tongue = [k for k in config.SMOKER_TONGUE_MATERIALS if k not in tongue_seen]
+    report.add(
+        "smoker tongue uses the smoker colour",
+        not tongue_bad and not missing_tongue,
+        "\n".join(tongue_bad + [f"missing {k}" for k in missing_tongue]),
     )
 
     # 5. Valve's own reader accepts every generated texture.

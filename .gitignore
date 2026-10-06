@@ -4,4 +4,5 @@ l4d2/*
 .work/*
 .env
 old.md
-__pycache__/*
+**/__pycache__/
+*.py[cod]
