@@ -1,0 +1,13 @@
+patch
+{
+include "materials/models/infected/common/l4d2/ci_body_include.vmt"
+insert
+{
+$basetexture "models/infected/common/l4d2/cim_roadcrew"
+$GRADIENTTEXTURE "models/infected/common/l4d1/ci_gradient_palette_roadcrew_l4d1"
+$EYEGLOW 1
+$BURNING 1
+$EYEGLOWCOLOR "[1 0.1 0]"
+$EYEGLOWFLASHLIGHTBOOST 1
+}
+}

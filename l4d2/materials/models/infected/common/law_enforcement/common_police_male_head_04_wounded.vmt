@@ -1,0 +1,8 @@
+patch
+{
+include "materials/models/infected/common/law_enforcement/common_police_male_head_04.vmt"
+insert
+{
+$wounded 1
+}
+}

@@ -1,0 +1,10 @@
+patch
+{
+include "materials/models/infected/common/common_infected_shared.vmt"
+insert
+{
+$baseTexture "models/DeadBodies/psds/Dead_Pilot_01"
+$CUTOUTDECALMAPPINGSCALE 7
+$nocull 1
+}
+}

@@ -1,0 +1,47 @@
+Using shader api: shaderapiempty.dll
+qdir:    "x:\storage\steam\steamapps\common\left 4 dead 2\left4dead2\addons\helpers\.work\qc\common_test\"
+gamedir: "X:\Storage\Steam\steamapps\common\Left 4 Dead 2\left4dead2\addons\helpers\.work\compile\"
+g_path:  "X:\Storage\Steam\steamapps\common\Left 4 Dead 2\left4dead2\addons\helpers\.work\qc\common_test\common_test.qc"
+Building binary model files...
+Working on "common_test.qc"
+SMD MODEL common_test_proxy.smd
+Processing LOD for material: proxy_common
+---------------------
+writing X:\Storage\Steam\steamapps\common\Left 4 Dead 2\left4dead2\addons\helpers\.work\compile\models/infected/common_test.mdl:
+bones        11180 bytes (34)
+animations     116 bytes (1 anims) (1 frames) [0:00]
+sequences      352 bytes (1 seq) 
+ik/pose        164 bytes
+eyeballs         0 bytes (0 eyeballs)
+flexes           0 bytes (0 flexes)
+textures        72 bytes
+keyvalues        0 bytes
+bone transforms     4688 bytes
+Please check if you need to delete X:\Storage\Steam\steamapps\common\Left 4 Dead 2\left4dead2\addons\helpers\.work\compile\models/infected/common_test.phz
+collision        0 bytes
+total        17820
+---------------------
+writing X:\Storage\Steam\steamapps\common\Left 4 Dead 2\left4dead2\addons\helpers\.work\compile\models/infected/common_test.vvd:
+vertices     31104 bytes (648 vertices)
+tangents     10368 bytes (648 vertices)
+total        41536 bytes
+---------------------
+Generating optimized mesh "X:\Storage\Steam\steamapps\common\Left 4 Dead 2\left4dead2\addons\helpers\.work\compile\models/infected/common_test.dx90.vtx":
+body parts:         8 bytes
+models:            20 bytes
+model LODs:        12 bytes
+meshes:             9 bytes
+strip groups:      25 bytes
+strips:            27 bytes
+verts:           5832 bytes
+indices:         1944 bytes
+bone changes:     144 bytes
+everything:      8045 bytes
+
+Completed "common_test.qc"
+CDynamicFunction: Loading library 'Kernel32.dll' (766D0000)
+CDynamicFunction: Lookup of 'TryEnterCriticalSection' in 'Kernel32.dll': 77C865B0
+CDynamicFunction: Loading library 'psapi.dll' (761D0000)
+CDynamicFunction: Lookup of 'GetProcessMemoryInfo' in 'psapi.dll': 761D1530
+CDynamicFunction: Closing library 'psapi.dll' (761D0000)
+CDynamicFunction: Closing library 'Kernel32.dll' (766D0000)

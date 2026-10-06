@@ -1,0 +1,9 @@
+patch
+{
+include "materials/models/infected/common/common_infected_shared.vmt"
+insert
+{
+$baseTexture "models\infected\common\rural\common_rural_upper_03"
+$CUTOUTDECALMAPPINGSCALE 6.8
+}
+}

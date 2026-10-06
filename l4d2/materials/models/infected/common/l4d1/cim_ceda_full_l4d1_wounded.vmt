@@ -1,0 +1,8 @@
+patch
+{
+include "materials/models/infected/common/l4d1/cim_ceda_full_l4d1.vmt"
+insert
+{
+$WOUNDED 1
+}
+}

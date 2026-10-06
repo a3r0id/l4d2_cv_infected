@@ -1,0 +1,28 @@
+"GameInfo"
+{
+	game	"L4D2 CV compile"
+	type multiplayer_only
+	nomodels 1
+	nohimodel 1
+	nodegraph 0
+	SupportsDX8 0
+
+	FileSystem
+	{
+		SteamAppId				550
+		ToolsAppId				563
+
+		// Relative entries resolve against the folder holding left4dead2.exe.
+		SearchPaths
+		{
+			Game				|gameinfo_path|.
+			Game				"D:/Storage/l4d2_cv_infected/build"
+			Game				update
+			Game				left4dead2_dlc3
+			Game				left4dead2_dlc2
+			Game				left4dead2_dlc1
+			Game				left4dead2
+			Game				hl2
+		}
+	}
+}

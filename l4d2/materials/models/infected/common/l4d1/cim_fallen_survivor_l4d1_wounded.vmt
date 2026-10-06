@@ -1,0 +1,8 @@
+patch
+{
+include "materials\models\Infected\common\L4D1\cim_fallen_survivor_L4d1.vmt"
+insert
+{
+$WOUNDED 1
+}
+}

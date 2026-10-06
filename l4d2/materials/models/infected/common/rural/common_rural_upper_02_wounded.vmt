@@ -1,0 +1,8 @@
+patch
+{
+include "materials/models/infected/common/rural/common_rural_upper_02.vmt"
+insert
+{
+$wounded 1
+}
+}

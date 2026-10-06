@@ -1,0 +1,47 @@
+Using shader api: shaderapiempty.dll
+qdir:    "x:\storage\steam\steamapps\common\left 4 dead 2\left4dead2\addons\helpers\.work\qc\jockey\"
+gamedir: "X:\Storage\Steam\steamapps\common\Left 4 Dead 2\left4dead2\addons\helpers\.work\compile\"
+g_path:  "X:\Storage\Steam\steamapps\common\Left 4 Dead 2\left4dead2\addons\helpers\.work\qc\jockey\jockey.qc"
+Building binary model files...
+Working on "jockey.qc"
+SMD MODEL jockey_proxy.smd
+Processing LOD for material: proxy_jockey
+---------------------
+writing X:\Storage\Steam\steamapps\common\Left 4 Dead 2\left4dead2\addons\helpers\.work\compile\models/infected/jockey.mdl:
+bones        13552 bytes (54)
+animations     136 bytes (1 anims) (1 frames) [0:00]
+sequences      432 bytes (1 seq) 
+ik/pose        164 bytes
+eyeballs         0 bytes (0 eyeballs)
+flexes           0 bytes (0 flexes)
+textures        72 bytes
+keyvalues        0 bytes
+bone transforms     7408 bytes
+Please check if you need to delete X:\Storage\Steam\steamapps\common\Left 4 Dead 2\left4dead2\addons\helpers\.work\compile\models/infected/jockey.phz
+collision        0 bytes
+total        22692
+---------------------
+writing X:\Storage\Steam\steamapps\common\Left 4 Dead 2\left4dead2\addons\helpers\.work\compile\models/infected/jockey.vvd:
+vertices     19584 bytes (408 vertices)
+tangents      6528 bytes (408 vertices)
+total        26176 bytes
+---------------------
+Generating optimized mesh "X:\Storage\Steam\steamapps\common\Left 4 Dead 2\left4dead2\addons\helpers\.work\compile\models/infected/jockey.dx90.vtx":
+body parts:         8 bytes
+models:            20 bytes
+model LODs:        12 bytes
+meshes:             9 bytes
+strip groups:      25 bytes
+strips:            27 bytes
+verts:           3672 bytes
+indices:         1224 bytes
+bone changes:     144 bytes
+everything:      5165 bytes
+
+Completed "jockey.qc"
+CDynamicFunction: Loading library 'Kernel32.dll' (766D0000)
+CDynamicFunction: Lookup of 'TryEnterCriticalSection' in 'Kernel32.dll': 77C865B0
+CDynamicFunction: Loading library 'psapi.dll' (761D0000)
+CDynamicFunction: Lookup of 'GetProcessMemoryInfo' in 'psapi.dll': 761D1530
+CDynamicFunction: Closing library 'psapi.dll' (761D0000)
+CDynamicFunction: Closing library 'Kernel32.dll' (766D0000)

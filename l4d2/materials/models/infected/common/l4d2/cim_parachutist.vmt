@@ -1,0 +1,10 @@
+patch
+{
+include "materials\models\Infected\common\common_infected_shared.vmt"
+insert
+{
+$basetexture "models\DeadBodies\parachutist\bpm_military.vtf"
+$phongboost 1
+$phongexponent 25
+}
+}

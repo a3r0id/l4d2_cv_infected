@@ -1,0 +1,8 @@
+patch
+{
+include "materials/models/infected/common/L4D1/cim_fallen_survivor_l4d1_Pilot.vmt"
+insert
+{
+$wounded 1
+}
+}
