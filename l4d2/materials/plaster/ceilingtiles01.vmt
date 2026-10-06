@@ -1,7 +1,0 @@
-lightmappedgeneric
-{
-$baseTexture "plaster/ceilingtiles01"
-$surfaceprop plaster
-$bumpmap "plaster/ceilingtiles-ssbump"
-$ssbump 1
-}

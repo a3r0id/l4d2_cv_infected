@@ -1,5 +1,0 @@
-VertexLitGeneric
-{
-$baseTexture "Models/Editor/overlay_helper"
-$translucent 1
-}

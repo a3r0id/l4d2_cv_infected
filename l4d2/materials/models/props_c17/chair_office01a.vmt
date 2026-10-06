@@ -1,6 +1,0 @@
-VertexLitGeneric
-{
-
-$basetexture "Models/props_c17/chair_office01a"
-$surfaceprop metal
-}

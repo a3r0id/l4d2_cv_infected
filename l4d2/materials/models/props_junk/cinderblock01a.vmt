@@ -1,6 +1,0 @@
-VertexLitGeneric
-{
-
-$basetexture "Models/props_junk/cinderblock01a"
-$surfaceprop concrete
-}

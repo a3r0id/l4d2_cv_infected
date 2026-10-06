@@ -1,7 +1,0 @@
-UnlitGeneric
-{
-
-$basetexture "editor/GizmoAxis"
-$vertexcolor 1
-$nocull 1
-}

@@ -1,6 +1,0 @@
-LightMappedGeneric
-{
-$basetexture "signs/sign_safety_checklist"
-$surfaceprop default
-$decal 1
-}

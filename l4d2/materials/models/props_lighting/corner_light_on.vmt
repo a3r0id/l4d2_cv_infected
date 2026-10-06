@@ -1,5 +1,0 @@
-VertexLitGeneric
-{
-$baseTexture "models\Props_Lighting/corner_light_On"
-$selfillum 1
-}

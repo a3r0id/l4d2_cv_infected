@@ -1,6 +1,0 @@
-VertexLitGeneric
-{
-$baseTexture "models\props\terror/HamRadio01"
-$Envmap env_cubemap
-$EnvmapMask "models\props\terror\HamRadio01_ref"
-}

@@ -1,6 +1,0 @@
-VertexLitGeneric
-{
-$basetexture "Models/props_swamp/parachute_bag01"
-$surfaceprop default
-"%keywords" l4d2
-}

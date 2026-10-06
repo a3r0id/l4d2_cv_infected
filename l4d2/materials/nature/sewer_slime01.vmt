@@ -1,5 +1,0 @@
-lightmappedgeneric
-{
-$baseTexture "decals/sewer_slime01_decal"
-$surfaceprop mud
-}

@@ -1,7 +1,0 @@
-LightmappedGeneric
-{
-$baseTexture "signs/quarter_shopsigns_01"
-$translucent 1
-$decal 1
-"%keywords" "l4d2, decal"
-}

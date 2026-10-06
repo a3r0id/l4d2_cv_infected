@@ -1,7 +1,0 @@
-VertexLitGeneric
-{
-$baseTexture "models\infected\hulk\tank_color"
-
-$translucent 1
-
-}

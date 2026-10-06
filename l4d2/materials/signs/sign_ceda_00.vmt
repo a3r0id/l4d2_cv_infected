@@ -1,9 +1,0 @@
-decalmodulate
-{
-$basetexture "signs/sign_ceda_00"
-$surfaceprop default
-$Decal 1
-$vertexcolor 1
-$vertexalpha 1
-"%keywords" l4d2
-}

@@ -1,6 +1,0 @@
-LightMappedGeneric
-{
-$basetexture "tools/toolsnodraw_metal"
-$surfaceprop metal
-"%compilenodraw" 1
-}

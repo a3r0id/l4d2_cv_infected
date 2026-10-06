@@ -1,6 +1,0 @@
-LightMappedGeneric
-{
-$basetexture "overlays/gallery_score_sign"
-$surfaceprop default
-$decal 1
-}

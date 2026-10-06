@@ -1,7 +1,0 @@
-LightMappedGeneric
-{
-$basetexture "overlays/urban_paintswatch_03a"
-$surfaceprop default
-$translucent 1
-$decal 1
-}

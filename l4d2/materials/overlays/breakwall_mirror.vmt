@@ -1,9 +1,0 @@
-LightmappedGeneric
-{
-$basetexture "overlays/breakwall_mirror"
-$translucent 1
-$decal 1
-$vertexcolor 1
-$vertexalpha 1
-$decalscale "0.25"
-}

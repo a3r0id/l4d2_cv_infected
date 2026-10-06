@@ -1,9 +1,0 @@
-Shadow
-{
-
-$no_fullbright 1
-$decal 1
-"%noToolTexture" 1
-$deferredshadows 1
-$blobbyshadows 0
-}

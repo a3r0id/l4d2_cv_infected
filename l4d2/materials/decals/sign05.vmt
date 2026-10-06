@@ -1,9 +1,0 @@
-lightmappedgeneric
-{
-$baseTexture "decals/sign05"
-$decal 1
-$decalscale "0.25"
-$translucent 1
-$vertexcolor 1
-$vertexalpha 1
-}

@@ -1,7 +1,0 @@
-LightmappedGeneric
-{
-$baseTexture "signs/impound_signage_04"
-
-$decal 1
-"%keywords" l4d2
-}

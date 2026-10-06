@@ -1,5 +1,0 @@
-VertexLitGeneric
-{
-$baseTexture "models\props_downtown/atm_cigarettemachine"
-$Surfaceprop metal
-}

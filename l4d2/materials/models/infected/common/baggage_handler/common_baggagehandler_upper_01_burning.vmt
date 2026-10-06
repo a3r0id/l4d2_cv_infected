@@ -1,8 +1,0 @@
-patch
-{
-include "materials\models\Infected\common\baggage_handler/common_baggagehandler_upper_01.vmt"
-insert
-{
-$BURNING 1
-}
-}

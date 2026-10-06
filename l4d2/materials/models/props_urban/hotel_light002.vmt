@@ -1,8 +1,0 @@
-
-VertexLitGeneric
-{
-$baseTexture "models/props_urban/hotel_light002.vtf"
-$envmap env_cubemap
-$basealphaenvmapmask 1
-
-}

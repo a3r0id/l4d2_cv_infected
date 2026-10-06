@@ -1,7 +1,0 @@
-LightmappedGeneric
-{
-
-$basetexture "Dev/dev_envcubemap"
-$envmap env_cubemap
-$surfaceprop concrete
-}

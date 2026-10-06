@@ -1,7 +1,0 @@
-VertexLitGeneric
-{
-$basetexture "concrete/concrete_ext_12"
-
-
-$surfaceprop concrete
-}

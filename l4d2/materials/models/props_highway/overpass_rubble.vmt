@@ -1,5 +1,0 @@
-VertexLitGeneric
-{
-$basetexture "concrete/rubbleedge"
-$surfaceprop concrete
-}

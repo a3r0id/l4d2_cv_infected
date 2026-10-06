@@ -1,8 +1,0 @@
-patch
-{
-include "materials/models/infected/common/common_male_suit_01_lower_04.vmt"
-insert
-{
-$wounded 1
-}
-}

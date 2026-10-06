@@ -1,8 +1,0 @@
-patch
-{
-include "materials/models/infected/common/common_male_black_head_01.vmt"
-insert
-{
-$wounded 1
-}
-}

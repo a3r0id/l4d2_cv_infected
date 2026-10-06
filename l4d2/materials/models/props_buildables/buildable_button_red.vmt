@@ -1,5 +1,0 @@
-VertexLitGeneric
-{
-$baseTexture "models\props_buildables/buildable_button_red"
-$selfillum 1
-}

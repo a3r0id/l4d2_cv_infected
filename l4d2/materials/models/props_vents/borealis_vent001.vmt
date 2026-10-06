@@ -1,5 +1,0 @@
-VertexLitGeneric
-{
-$basetexture "Models/props_vents/borealis_vent001"
-$surfaceprop metal
-}

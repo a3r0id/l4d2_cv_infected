@@ -1,7 +1,0 @@
-UnlitGeneric
-{
-
-$basetexture "editor/GizmoRotateHandle"
-$vertexcolor 1
-$nocull 1
-}
