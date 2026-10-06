@@ -48,10 +48,6 @@ Colors live in `cvmod/config.py` (`CLASS_COLORS` and `TRACER_COLOR`). After edit
 2. **Meshes.** Each infected model is recompiled as boxes built from its own hitboxes, so the silhouette is the volume bullets actually test. Animations, grabs, and hitboxes are copied from the original model.
 3. **Shots.** Each survivor bullet becomes a beam from the eyes to the server impact. A hit ends on the hitbox. A miss ends on the world. Grenades, molotovs, pipe bombs, and bile jars get the same beam while they fly. Beams last 0.5 seconds and use the tracer color, so a frame can score a hit when that color meets a class color.
 
- Its materials keep their original look and gain `$ignorez`, so the bile stays visible through walls. Rain, blood, and weapon effects are left alone.
-
-The smoker's extended tongue is a rope and a joint sprite, not part of `smoker.mdl`. Those two materials are replaced with the smoker colour and draw through walls, so the tongue is the same orange as the body.
-
 Models that only exist to play animations, and loose gibs that carry their own sequences, keep their original mesh and get the flat material instead.
 
 L4D1 campaigns and The Sacrifice do not use the base special models. Those maps spawn `hunter_l4d1`, `smoker_l4d1`, `boomer_l4d1`, and `hulk_l4d1`. A few Sacrifice maps spawn `hulk_dlc3` instead. The addon replaces those variants too. Common infected on those campaigns (`common_police_male01`, `common_male01`, `common_military_male01`, and the other L4D1 bodies) are included and colored pink.
