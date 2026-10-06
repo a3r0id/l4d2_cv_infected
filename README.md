@@ -3,6 +3,8 @@
 Customizable Left 4 Dead 2 addon that modifies the infected models to make them easier to see.
 Also makes spitter puddles visible through walls and draws a short beam along each shot.
 
+My initial goal was to make the infected easier to see for a computer vision project, but I've found it's really fun to play with.
+
 While this does not break TOS and uses the official SDK, this will work in servers that allow custom addons (sv_cheats 1), while also bypassing the infected model integrity checks. In other words, this will work just fine on those custom Chinese servers.
 
 Model overrides directly represent the hitboxes of the infected models.
