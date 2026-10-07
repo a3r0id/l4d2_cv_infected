@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -11,6 +12,8 @@ from .features import Features
 
 CLIENT_EXEC_LINE = "exec cv_client"
 CLIENT_CFG_NAME = "cv_client.cfg"
+CLEANUP_EXEC_LINE = "exec cv_cleanup"
+CLEANUP_CFG_NAME = "cv_cleanup.cfg"
 
 
 def addoninfo_text(features: Features) -> str:
@@ -19,6 +22,8 @@ def addoninfo_text(features: Features) -> str:
         parts.append("consumables")
     if features.trace:
         parts.append("trace")
+    if features.cleanup:
+        parts.append("cleanup")
     tag = ", ".join(parts)
     desc = (
         "Replaces infected materials with flat, depth-ignoring colours for computer vision."
@@ -27,12 +32,14 @@ def addoninfo_text(features: Features) -> str:
         desc += " Medkits and other pickups are bright white."
     if features.trace:
         desc += " Includes cheat-only shot tracers and capture settings."
+    if features.cleanup:
+        desc += " Clears ragdolls and decals when shooting."
     weapon = "1" if features.consumables else "0"
     return f"""\
 "AddonInfo"
 {{
 	addontitle			"CV Infected Override"
-	addonversion		"1.6"
+	addonversion		"1.7"
 	addontagline		"Flat x-ray overrides ({tag})"
 	addonauthor			"cvmod pipeline"
 	addondescription	"{desc}"
@@ -111,8 +118,8 @@ def build_vpk(features: Features | None = None) -> Path:
 def deploy(loose: bool = False, features: Features | None = None) -> list[Path]:
     """Install into left4dead2/addons/, replacing any previous install.
 
-    Optional cfg hooks from a prior --feat-trace install are removed when that
-    feature is off, so each deploy is a clean slate for the selected features.
+    Optional cfg hooks from a prior --feat-trace / --feat-cleanup install are
+    removed when those features are off, so each deploy is a clean slate.
     """
     features = features or Features()
     config.ADDONS_DIR.mkdir(parents=True, exist_ok=True)
@@ -149,7 +156,7 @@ def deploy(loose: bool = False, features: Features | None = None) -> list[Path]:
             ) from exc
         written.append(vpk_target)
 
-    installed, cleaned = sync_client_cfg(features)
+    installed, cleaned = sync_loose_cfgs(features)
     written.extend(installed)
     for path in cleaned:
         print(f"cleaned {path}")
@@ -172,57 +179,135 @@ def _strip_exec_line(path: Path, line: str) -> bool:
     return True
 
 
-def sync_client_cfg(features: Features) -> tuple[list[Path], list[Path]]:
-    """Install or remove the loose client cfg hooks for --feat-trace.
+def _ensure_exec_line(path: Path, line: str) -> None:
+    existing = path.read_text(encoding="utf-8", errors="replace") if path.exists() else ""
+    if line in existing:
+        return
+    suffix = "" if existing.endswith("\n") or not existing else "\n"
+    path.write_text(existing + suffix + line + "\n", encoding="utf-8")
+
+
+def _ensure_valve_exec(valve: Path, line: str) -> None:
+    """Append `line` after stuffcmds so it wins over launch-option binds."""
+    valve_text = valve.read_text(encoding="utf-8", errors="replace") if valve.exists() else ""
+    kept = [ln for ln in valve_text.splitlines() if ln.strip() != line]
+    if not kept:
+        kept = ["exec joystick.cfg", "exec autoexec.cfg", "stuffcmds"]
+    while kept and not kept[-1].strip():
+        kept.pop()
+    kept.append(line)
+    valve.write_text("\n".join(kept) + "\n", encoding="utf-8")
+
+
+def _restore_mouse1_attack(cfg_dir: Path) -> list[Path]:
+    """Put MOUSE1 back on +attack after removing the cleanup aliases."""
+    touched: list[Path] = []
+    config_cfg = cfg_dir / "config.cfg"
+    if not config_cfg.exists():
+        return touched
+    text = config_cfg.read_text(encoding="utf-8", errors="replace")
+    new_text, count = re.subn(
+        r'(?im)^(\s*bind\s+"MOUSE1"\s+)"[^"]*"',
+        r'\1"+attack"',
+        text,
+    )
+    if count:
+        config_cfg.write_text(new_text, encoding="utf-8")
+        touched.append(config_cfg)
+    return touched
+
+
+def _cleanup_cfg_body() -> str:
+    """MOUSE1 clears clutter on press and release; caps keep the scene sparse."""
+    lines = [
+        "// cv_infected shot cleanup. Installed with --feat-cleanup.",
+        "// Clears ragdolls/decals when you press or release fire. Caps keep",
+        "// new clutter from building up between shots without per-frame work.",
+        "",
+    ]
+    lines.extend(f"{name} {value}" for name, value in config.CLEANUP_COMMANDS)
+    lines.extend(
+        [
+            "",
+            'alias "cl_cleanup" "r_cleardecals; cl_destroy_ragdolls"',
+            # Paired +/- aliases keep -attack on mouse-up. A bare
+            # bind MOUSE1 "+attack; cl_cleanup" can drop the release.
+            'alias "+cv_attack" "+attack; cl_cleanup"',
+            'alias "-cv_attack" "-attack; cl_cleanup"',
+            'bind "MOUSE1" "+cv_attack"',
+            # Mid-spray clear without letting go of the trigger.
+            'bind "MOUSE3" "cl_cleanup"',
+            "",
+            'echo "[cv_infected] shot cleanup applied"',
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def sync_loose_cfgs(features: Features) -> tuple[list[Path], list[Path]]:
+    """Install or remove loose cfg hooks for --feat-trace / --feat-cleanup.
 
     Returns `(installed, cleaned)`.
     """
     cfg_dir = config.GAME_DIR / "cfg"
     cfg_dir.mkdir(parents=True, exist_ok=True)
-    path = cfg_dir / CLIENT_CFG_NAME
     autoexec = cfg_dir / "autoexec.cfg"
     valve = cfg_dir / "valve.rc"
     installed: list[Path] = []
     cleaned: list[Path] = []
 
-    if not features.trace:
-        if path.exists():
-            path.unlink()
-            cleaned.append(path)
+    client_path = cfg_dir / CLIENT_CFG_NAME
+    if features.trace:
+        body = [
+            "// cv_infected client settings. Applied from autoexec and valve.rc.",
+            "// Installed only when packing with --feat-trace.",
+            "",
+        ]
+        body.extend(f"{name} {value}" for name, value in config.CLIENT_COMMANDS)
+        body.append("")
+        body.append('echo "[cv_infected] client settings applied"')
+        body.append("")
+        client_path.write_text("\n".join(body), encoding="utf-8")
+        installed.append(client_path)
+        _ensure_exec_line(autoexec, CLIENT_EXEC_LINE)
+        installed.append(autoexec)
+        _ensure_valve_exec(valve, CLIENT_EXEC_LINE)
+        installed.append(valve)
+    else:
+        if client_path.exists():
+            client_path.unlink()
+            cleaned.append(client_path)
         if _strip_exec_line(autoexec, CLIENT_EXEC_LINE):
             cleaned.append(autoexec)
         if _strip_exec_line(valve, CLIENT_EXEC_LINE):
             cleaned.append(valve)
-        return installed, cleaned
 
-    body = [
-        "// cv_infected client settings. Applied from autoexec and valve.rc.",
-        "// Installed only when packing with --feat-trace.",
-        "",
-    ]
-    body.extend(f"{name} {value}" for name, value in config.CLIENT_COMMANDS)
-    body.append("")
-    body.append('echo "[cv_infected] client settings applied"')
-    body.append("")
-    path.write_text("\n".join(body), encoding="utf-8")
-    installed.append(path)
+    cleanup_path = cfg_dir / CLEANUP_CFG_NAME
+    if features.cleanup:
+        cleanup_path.write_text(_cleanup_cfg_body(), encoding="utf-8")
+        installed.append(cleanup_path)
+        _ensure_exec_line(autoexec, CLEANUP_EXEC_LINE)
+        if autoexec not in installed:
+            installed.append(autoexec)
+        # After stuffcmds so launch options cannot steal MOUSE1 back.
+        _ensure_valve_exec(valve, CLEANUP_EXEC_LINE)
+        if valve not in installed:
+            installed.append(valve)
+    else:
+        if cleanup_path.exists():
+            cleanup_path.unlink()
+            cleaned.append(cleanup_path)
+        if _strip_exec_line(autoexec, CLEANUP_EXEC_LINE):
+            if autoexec not in cleaned:
+                cleaned.append(autoexec)
+        if _strip_exec_line(valve, CLEANUP_EXEC_LINE):
+            if valve not in cleaned:
+                cleaned.append(valve)
+        for path in _restore_mouse1_attack(cfg_dir):
+            cleaned.append(path)
 
-    existing = autoexec.read_text(encoding="utf-8", errors="replace") if autoexec.exists() else ""
-    if CLIENT_EXEC_LINE not in existing:
-        suffix = "" if existing.endswith("\n") or not existing else "\n"
-        autoexec.write_text(existing + suffix + CLIENT_EXEC_LINE + "\n", encoding="utf-8")
-    installed.append(autoexec)
-
-    valve_text = valve.read_text(encoding="utf-8", errors="replace") if valve.exists() else ""
-    kept = [ln for ln in valve_text.splitlines() if ln.strip() != CLIENT_EXEC_LINE]
-    if not kept:
-        kept = ["exec joystick.cfg", "exec autoexec.cfg", "stuffcmds"]
-    while kept and not kept[-1].strip():
-        kept.pop()
-    kept.append(CLIENT_EXEC_LINE)
-    valve.write_text("\n".join(kept) + "\n", encoding="utf-8")
-    installed.append(valve)
-    return installed, removed
+    return installed, cleaned
 
 
 GAMEINFO = """\

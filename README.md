@@ -5,14 +5,21 @@ Customizable Left 4 Dead 2 addon that modifies the infected models/FX/attacks to
 My initial goal was to make the infected easier to see for a computer vision project, but I've found it's really fun to play with.
 
 ### Features
-- Infected models are replaced with depth-test ignored hitboxes. (X-Ray)
-- Spitter puddles and Smoker tongues are also X-Ray.
-- Optional: medkits, pills, adrenaline, defibs, throwables, and ammo packs as bright white X-Ray pickups (`--feat-override-consumables`).
-- Optional: cheat-only shot tracers, capture settings, and client cfg hooks (`--feat-trace`).
 
-*This does not break Valve TOS and uses the official SDK and will work in servers that allow custom addons.
-This will work just fine on those custom Chinese servers - aside from script-based things that will only take effect if the server is sv_cheats 1 (tracers/HUD changes) - Model/material changes will work just fine.
-Cheaters suck. Please don't use this to gain some imaginary competitive edge - this is just for fun!*
+| Feature | Flag | Regular server | Addon server | `sv_cheats 1` |
+| ------- | ---- | :------------: | :----------: | :-----------: |
+| Infected hitbox X-ray (color per class) | core | ✗ | ✓ | ✓ |
+| Spitter puddles and smoker tongue X-ray | core | ✗ | ✓ | ✓ |
+| Consumable pickups X-ray (medkits, pills, throwables, ammo packs) | `--feat-override-consumables` | ✗ | ✓ | ✓ |
+| Recolored client bullet tracers + capture HUD/view settings | `--feat-trace` | ✗ | ✓ | ✓ |
+| Scripted 3D shot beams (`mapspawn_addon.nut`) | `--feat-trace` | ✗ | ✗ | ✓ |
+| Clear ragdolls/decals when shooting | `--feat-cleanup` | ✓ | ✓ | ✓ |
+
+**Regular server** = official or stock public server that blocks client addons. 
+**Addon server** = allows custom client VPKs (many custom/community servers). 
+**`sv_cheats 1`** = listen/local host where cheat convars and addon VScript can run.
+
+*This does not break Valve TOS and uses the official SDK. Model/material overrides need a server that allows addons. Scripted shot beams need a host with `sv_cheats 1`. Cleanup is client cfg only, so it still runs on regular servers. Cheaters suck — please don't use this to achieve some imaginary competitive edge; This is just for fun, mess around with it in expert mode!*
 
 [Clip: CV Override Initial Test](https://medal.tv/games/left-4-dead-2/clips/nFNBhWZWYpHmz7Ptk?invite=cr-MSx0N2MsMTczMjc5NzQ3)
 
@@ -68,7 +75,8 @@ Optional features:
 ```
 make CONSUMABLES=1
 make TRACE=1
-make CONSUMABLES=1 TRACE=1
+make CLEANUP=1
+make CONSUMABLES=1 TRACE=1 CLEANUP=1
 ```
 
 Or with `main.py`:
@@ -76,7 +84,8 @@ Or with `main.py`:
 ```
 python main.py all --feat-override-consumables
 python main.py all --feat-trace
-python main.py all --feat-override-consumables --feat-trace
+python main.py all --feat-cleanup
+python main.py all --feat-override-consumables --feat-trace --feat-cleanup
 ```
 
 That finds the Steam install of Left 4 Dead 2, packs `dist/cv_infected.vpk`, and copies it to that install's `left4dead2/addons/` folder. Each deploy overwrites the previous addon and removes loose client cfg hooks that the selected features do not need. Enable **CV Infected Override** under Extras, then Add-ons.
@@ -112,7 +121,7 @@ Run these from this directory. `make help` prints the same list.
 | `make help`               | Print the targets                                                           |
 
 
-`FORCE=1` rebuilds even when inputs have not changed. `KEEP=1` leaves the generated compile files on disk. `CONSUMABLES=1` and `TRACE=1` enable the optional features. Example: `make models ONLY=hunter FORCE=1`.
+`FORCE=1` rebuilds even when inputs have not changed. `KEEP=1` leaves the generated compile files on disk. `CONSUMABLES=1`, `TRACE=1`, and `CLEANUP=1` enable the optional features. Example: `make models ONLY=hunter FORCE=1`.
 
 Unchanged files are skipped. Another addon that ships its own `models/infected/*.mdl` will fight this one. Only one of them wins.
 
@@ -120,9 +129,11 @@ Unchanged files are skipped. Another addon that ships its own `models/infected/*
 
 This is a client addon. It works on public servers that allow addons. Nothing here has to be hosted by you.
 
-Quit the game fully after installing. A running game keeps the addon it loaded at startup. In Extras, then Add-ons, **CV Infected Override** should say version **1.6**.
+Quit the game fully after installing. A running game keeps the addon it loaded at startup. In Extras, then Add-ons, **CV Infected Override** should say version **1.7**.
 
 With `TRACE=1` / `--feat-trace`, deploy also writes `left4dead2/cfg/cv_client.cfg` and runs it from `autoexec.cfg` and from the end of `valve.rc`. Without that flag, deploy removes those hooks. A config inside the addon cannot be exec'd. The console prints `[cv_infected] client settings applied` when the client cfg runs.
+
+With `CLEANUP=1` / `--feat-cleanup`, deploy writes `left4dead2/cfg/cv_cleanup.cfg` and execs it from `autoexec.cfg` and `valve.rc`. Fire (MOUSE1) clears decals and ragdolls on press and release, caps new ragdolls/decals, and MOUSE3 clears mid-spray. Without the flag, deploy removes that cfg and restores `MOUSE1` to `+attack`.
 
 Shots use the tracers the game already draws, recolored to **255, 0, 128**, from the muzzle to the impact. First-person tracers are off until `cv_client.cfg` runs.
 

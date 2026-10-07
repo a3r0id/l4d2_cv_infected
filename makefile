@@ -1,7 +1,7 @@
 # Simpler entry points for main.py.
 #
 #   make                         index, materials, models, pack, deploy (infected only)
-#   make CONSUMABLES=1 TRACE=1   same, with optional features
+#   make CONSUMABLES=1 TRACE=1 CLEANUP=1   same, with optional features
 #   make colors                  materials, pack, deploy
 #   make models ONLY=hunter      one proxy mesh
 #   make verify                  check the build tree
@@ -12,6 +12,7 @@
 # KEEP=1          keep generated QC/SMD and studiomdl logs
 # CONSUMABLES=1   --feat-override-consumables
 # TRACE=1         --feat-trace
+# CLEANUP=1       --feat-cleanup
 
 PY ?= python
 
@@ -37,6 +38,9 @@ endif
 ifneq ($(TRACE),)
 FEAT_FLAGS += --feat-trace
 endif
+ifneq ($(CLEANUP),)
+FEAT_FLAGS += --feat-cleanup
+endif
 
 .PHONY: help all index materials models pack deploy loose verify hlmv colors
 
@@ -57,6 +61,7 @@ help:
 	@echo KEEP=1           keep generated QC/SMD and studiomdl logs
 	@echo CONSUMABLES=1    pack medkits and other pickups
 	@echo TRACE=1          pack cheat-only tracers, scripts, and client cfg
+	@echo CLEANUP=1        clear ragdolls/decals when shooting
 
 all:
 	$(PY) main.py all $(ONLY_FLAG) $(FORCE_FLAG) $(KEEP_FLAG) $(FEAT_FLAGS)

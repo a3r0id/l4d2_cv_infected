@@ -289,6 +289,20 @@ CLIENT_COMMANDS: tuple[tuple[str, str], ...] = (
     ("net_graph", "0"),
 )
 
+# Cap clutter between shots. Paired with the MOUSE1 cleanup alias in
+# cv_cleanup.cfg (--feat-cleanup). These are client-side and safe on public servers.
+CLEANUP_COMMANDS: tuple[tuple[str, str], ...] = (
+    # 0 = show no client ragdolls. Clears still run so leftovers from before
+    # the cvar applied do not stick around.
+    ("cl_ragdoll_limit", "0"),
+    ("ragdoll_sleepaftertime", "0.25"),
+    ("r_decals", "1"),
+    ("r_drawmodeldecals", "0"),
+    ("func_break_max_pieces", "0"),
+    ("violence_hblood", "0"),
+    ("violence_hgibs", "0"),
+)
+
 # Materials that must keep their alpha cutout instead of becoming solid quads.
 # Relative to materials/, forward slashes, lowercase, no extension.
 ALPHA_PRESERVE: set[str] = {

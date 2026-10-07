@@ -7,6 +7,7 @@ Examples:
     python main.py all                   # index + materials + models + pack + deploy
     python main.py all --feat-override-consumables
     python main.py all --feat-trace
+    python main.py all --feat-cleanup
     python main.py deploy --loose        # fast iteration, no VPK repack
     python main.py verify --only hunter  # open the result in HLMV
 """
@@ -157,6 +158,11 @@ def main(argv: list[str] | None = None) -> int:
         "--feat-trace",
         action="store_true",
         help="also pack cheat-only shot scripts, capture cfg, and client tracer hooks",
+    )
+    parser.add_argument(
+        "--feat-cleanup",
+        action="store_true",
+        help="also patch autoexec to clear ragdolls and decals when shooting",
     )
     args = parser.parse_args(argv)
 
