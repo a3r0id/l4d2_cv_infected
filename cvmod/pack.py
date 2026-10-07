@@ -6,52 +6,84 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from . import config
+from . import config, features as features_mod
+from .features import Features
 
-ADDONINFO = """\
+CLIENT_EXEC_LINE = "exec cv_client"
+CLIENT_CFG_NAME = "cv_client.cfg"
+
+
+def addoninfo_text(features: Features) -> str:
+    parts = ["infected"]
+    if features.consumables:
+        parts.append("consumables")
+    if features.trace:
+        parts.append("trace")
+    tag = ", ".join(parts)
+    desc = (
+        "Replaces infected materials with flat, depth-ignoring colours for computer vision."
+    )
+    if features.consumables:
+        desc += " Medkits and other pickups are bright white."
+    if features.trace:
+        desc += " Includes cheat-only shot tracers and capture settings."
+    weapon = "1" if features.consumables else "0"
+    return f"""\
 "AddonInfo"
-{
+{{
 	addontitle			"CV Infected Override"
-	addonversion		"1.4"
-	addontagline		"Flat x-ray infected for computer vision"
+	addonversion		"1.6"
+	addontagline		"Flat x-ray overrides ({tag})"
 	addonauthor			"cvmod pipeline"
-	addondescription	"Replaces every infected material with a flat, unlit, depth-ignoring colour, one per infected class, so frames can be segmented by exact pixel colour."
+	addondescription	"{desc}"
 
 	addonContent_Skin			1
 	addonContent_CommonInfected	1
 	addonContent_BossInfected	1
-}
+	addonContent_Weapon			{weapon}
+}}
 """
 
 
-def write_addoninfo(root: Path) -> Path:
+def write_addoninfo(root: Path, features: Features) -> Path:
     path = root / "addoninfo.txt"
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(ADDONINFO, encoding="utf-8")
+    path.write_text(addoninfo_text(features), encoding="utf-8")
     return path
 
 
-def _staging() -> Path:
-    """vpk.exe names the archive after the folder, so stage under the addon name."""
+def stage_addon(features: Features) -> Path:
+    """Copy the selected build files into a clean staging folder for packing."""
+    if not config.BUILD.exists():
+        raise FileNotFoundError(f"nothing to pack: {config.BUILD} does not exist")
+
     staging = config.WORK / "vpk" / config.ADDON_NAME
     if staging.exists():
         shutil.rmtree(staging)
     staging.mkdir(parents=True)
-    for child in sorted(config.BUILD.iterdir()):
-        target = staging / child.name
-        if child.is_dir():
-            shutil.copytree(child, target)
-        else:
-            shutil.copy2(child, target)
-    write_addoninfo(staging)
+
+    copied = 0
+    for path in sorted(config.BUILD.rglob("*")):
+        if not path.is_file():
+            continue
+        rel = path.relative_to(config.BUILD).as_posix()
+        if not features_mod.include_build_path(rel, features):
+            continue
+        dest = staging / rel
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(path, dest)
+        copied += 1
+
+    write_addoninfo(staging, features)
+    (staging / "cv_features.txt").write_text(features.label() + "\n", encoding="utf-8")
+    if copied == 0:
+        raise RuntimeError("staging copied zero files; build tree may be empty")
     return staging
 
 
-def build_vpk() -> Path:
-    if not config.BUILD.exists():
-        raise FileNotFoundError(f"nothing to pack: {config.BUILD} does not exist")
-
-    staging = _staging()
+def build_vpk(features: Features | None = None) -> Path:
+    features = features or Features()
+    staging = stage_addon(features)
     produced = staging.parent / f"{config.ADDON_NAME}.vpk"
     if produced.exists():
         produced.unlink()
@@ -76,30 +108,38 @@ def build_vpk() -> Path:
     return config.VPK_PATH
 
 
-def deploy(loose: bool = False) -> list[Path]:
-    """Install into left4dead2/addons/.
+def deploy(loose: bool = False, features: Features | None = None) -> list[Path]:
+    """Install into left4dead2/addons/, replacing any previous install.
 
-    The VPK and the unpacked folder are mutually exclusive: shipping both would
-    mount the same files twice, so deploying one removes the other.
+    Optional cfg hooks from a prior --feat-trace install are removed when that
+    feature is off, so each deploy is a clean slate for the selected features.
     """
+    features = features or Features()
     config.ADDONS_DIR.mkdir(parents=True, exist_ok=True)
     vpk_target = config.ADDONS_DIR / f"{config.ADDON_NAME}.vpk"
     dir_target = config.ADDONS_DIR / config.ADDON_NAME
     written: list[Path] = []
 
-    if loose:
-        if vpk_target.exists():
+    # Always clear both install shapes first so a VPK never sits next to a
+    # leftover loose folder from the last deploy.
+    if vpk_target.exists():
+        try:
             vpk_target.unlink()
-        if dir_target.exists():
-            shutil.rmtree(dir_target)
-        shutil.copytree(config.BUILD, dir_target)
-        write_addoninfo(dir_target)
+        except PermissionError as exc:
+            raise PermissionError(
+                f"{vpk_target} is in use, usually because Left 4 Dead 2 is running. "
+                f"Close the game and deploy again. The built addon is at {config.VPK_PATH}."
+            ) from exc
+    if dir_target.exists():
+        shutil.rmtree(dir_target)
+
+    if loose:
+        staging = stage_addon(features)
+        shutil.copytree(staging, dir_target)
+        shutil.rmtree(staging, ignore_errors=True)
         written.append(dir_target)
     else:
-        if not config.VPK_PATH.exists():
-            build_vpk()
-        if dir_target.exists():
-            shutil.rmtree(dir_target)
+        build_vpk(features)
         try:
             shutil.copy2(config.VPK_PATH, vpk_target)
         except PermissionError as exc:
@@ -109,50 +149,80 @@ def deploy(loose: bool = False) -> list[Path]:
             ) from exc
         written.append(vpk_target)
 
-    written.extend(install_client_cfg())
+    installed, cleaned = sync_client_cfg(features)
+    written.extend(installed)
+    for path in cleaned:
+        print(f"cleaned {path}")
     return written
 
 
-def install_client_cfg() -> list[Path]:
-    """Put client settings in the real cfg folder.
+def _strip_exec_line(path: Path, line: str) -> bool:
+    """Remove exact `line` entries from a cfg. Returns True when the file changed."""
+    if not path.exists():
+        return False
+    text = path.read_text(encoding="utf-8", errors="replace")
+    lines = [ln for ln in text.splitlines() if ln.strip() != line]
+    new_text = ("\n".join(lines) + "\n") if lines else ""
+    if new_text == text:
+        return False
+    if new_text:
+        path.write_text(new_text, encoding="utf-8")
+    else:
+        path.unlink()
+    return True
 
-    A cfg inside the addon VPK cannot be exec'd, and a server script does not
-    run when this addon is only installed on a public-server client.
+
+def sync_client_cfg(features: Features) -> tuple[list[Path], list[Path]]:
+    """Install or remove the loose client cfg hooks for --feat-trace.
+
+    Returns `(installed, cleaned)`.
     """
     cfg_dir = config.GAME_DIR / "cfg"
     cfg_dir.mkdir(parents=True, exist_ok=True)
+    path = cfg_dir / CLIENT_CFG_NAME
+    autoexec = cfg_dir / "autoexec.cfg"
+    valve = cfg_dir / "valve.rc"
+    installed: list[Path] = []
+    cleaned: list[Path] = []
+
+    if not features.trace:
+        if path.exists():
+            path.unlink()
+            cleaned.append(path)
+        if _strip_exec_line(autoexec, CLIENT_EXEC_LINE):
+            cleaned.append(autoexec)
+        if _strip_exec_line(valve, CLIENT_EXEC_LINE):
+            cleaned.append(valve)
+        return installed, cleaned
+
     body = [
         "// cv_infected client settings. Applied from autoexec and valve.rc.",
-        "// First-person tracers stay off until this file runs.",
+        "// Installed only when packing with --feat-trace.",
         "",
     ]
     body.extend(f"{name} {value}" for name, value in config.CLIENT_COMMANDS)
     body.append("")
     body.append('echo "[cv_infected] client settings applied"')
     body.append("")
-    path = cfg_dir / "cv_client.cfg"
     path.write_text("\n".join(body), encoding="utf-8")
+    installed.append(path)
 
-    autoexec = cfg_dir / "autoexec.cfg"
-    line = "exec cv_client"
     existing = autoexec.read_text(encoding="utf-8", errors="replace") if autoexec.exists() else ""
-    if line not in existing:
+    if CLIENT_EXEC_LINE not in existing:
         suffix = "" if existing.endswith("\n") or not existing else "\n"
-        autoexec.write_text(existing + suffix + line + "\n", encoding="utf-8")
+        autoexec.write_text(existing + suffix + CLIENT_EXEC_LINE + "\n", encoding="utf-8")
+    installed.append(autoexec)
 
-    # valve.rc runs autoexec, then stuffcmds. Launch options stuffed there can
-    # turn the HUD and the viewmodel back on. Running again after that is the
-    # last cfg this file executes.
-    valve = cfg_dir / "valve.rc"
     valve_text = valve.read_text(encoding="utf-8", errors="replace") if valve.exists() else ""
-    kept = [ln for ln in valve_text.splitlines() if ln.strip() != line]
+    kept = [ln for ln in valve_text.splitlines() if ln.strip() != CLIENT_EXEC_LINE]
     if not kept:
         kept = ["exec joystick.cfg", "exec autoexec.cfg", "stuffcmds"]
     while kept and not kept[-1].strip():
         kept.pop()
-    kept.append(line)
+    kept.append(CLIENT_EXEC_LINE)
     valve.write_text("\n".join(kept) + "\n", encoding="utf-8")
-    return [path, autoexec, valve]
+    installed.append(valve)
+    return installed, removed
 
 
 GAMEINFO = """\

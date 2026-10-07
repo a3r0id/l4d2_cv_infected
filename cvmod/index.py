@@ -14,7 +14,7 @@ import json
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
-from . import config, mdl, vmt
+from . import config, mdl, vmt, vpkutil
 
 # Fallback only, for VMTs no model referenced.
 DIR_CLASS = {
@@ -144,45 +144,72 @@ def _describe(entry: MaterialEntry) -> None:
     entry.translucent = material.truthy("$translucent")
 
 
+def _index_model(index: Index, path: Path, cls: str) -> None:
+    if not mdl.has_geometry(path):
+        return  # animation-only model, nothing to recolour
+    try:
+        model = mdl.read(path)
+    except mdl.MdlError:
+        return
+
+    rel = path.relative_to(config.SRC_MODELS).as_posix()
+    entry = ModelEntry(
+        stem=path.stem,
+        rel_path=rel,
+        cls=cls,
+        bones=len(model.bones),
+        hitboxes=len(model.hitbox_sets[0].boxes) if model.hitbox_sets else 0,
+        include_models=list(model.include_models),
+    )
+
+    for texture in model.textures:
+        hit = next(
+            (c for c in _candidates(model.cdmaterials, texture) if material_path(c).exists()),
+            None,
+        )
+        if hit is None:
+            if texture.strip():
+                entry.unresolved.append(texture)
+            continue
+        if config.is_excluded_material(hit):
+            continue
+        if hit not in entry.materials:
+            entry.materials.append(hit)
+        _claim(index, hit, cls, "model", path.stem)
+
+    index.models[path.stem] = entry
+
+
+def ensure_consumable_models() -> list[Path]:
+    """Pull world pickup models out of the game VPK when the checkout lacks them."""
+    required: list[str] = []
+    optional: list[str] = []
+    for stem in config.CONSUMABLE_MODEL_STEMS:
+        base = f"models/w_models/weapons/{stem}"
+        required.extend([base + ".mdl", base + ".vvd", base + ".dx90.vtx"])
+        optional.append(base + ".phy")
+    try:
+        written = vpkutil.extract_game_files(required, config.SRC)
+        written.extend(vpkutil.extract_game_files(optional, config.SRC, optional=True))
+        return written
+    except (FileNotFoundError, OSError, RuntimeError) as exc:
+        print(f"warning: could not extract consumable models: {exc}")
+        return []
+
+
 def build() -> Index:
     index = Index()
+    ensure_consumable_models()
 
     for path in sorted(config.SRC_INFECTED_MODELS.rglob("*.mdl")):
-        if not mdl.has_geometry(path):
-            continue  # animation-only model, nothing to recolour
-        try:
-            model = mdl.read(path)
-        except mdl.MdlError:
-            continue
-
         rel_path = path.relative_to(config.SRC_INFECTED_MODELS)
         cls = config.classify_model(path.stem, rel_path.parts[:-1])
-        rel = path.relative_to(config.SRC_MODELS).as_posix()
-        entry = ModelEntry(
-            stem=path.stem,
-            rel_path=rel,
-            cls=cls,
-            bones=len(model.bones),
-            hitboxes=len(model.hitbox_sets[0].boxes) if model.hitbox_sets else 0,
-            include_models=list(model.include_models),
-        )
+        _index_model(index, path, cls)
 
-        for texture in model.textures:
-            hit = next(
-                (c for c in _candidates(model.cdmaterials, texture) if material_path(c).exists()),
-                None,
-            )
-            if hit is None:
-                if texture.strip():
-                    entry.unresolved.append(texture)
-                continue
-            if config.is_excluded_material(hit):
-                continue
-            if hit not in entry.materials:
-                entry.materials.append(hit)
-            _claim(index, hit, cls, "model", path.stem)
-
-        index.models[path.stem] = entry
+    for stem in config.CONSUMABLE_MODEL_STEMS:
+        path = config.SRC_MODELS / "w_models" / "weapons" / f"{stem}.mdl"
+        if path.exists():
+            _index_model(index, path, "consumable")
 
     # Defensive sweep: any infected VMT no model referenced still gets recoloured.
     infected_root = config.SRC_MATERIALS / "models" / "infected"
@@ -193,6 +220,14 @@ def build() -> Index:
         rel_parts = path.relative_to(infected_root).parts
         cls = DIR_CLASS.get(rel_parts[0].lower(), "common") if len(rel_parts) > 1 else "common"
         _claim(index, key, cls, "directory", None)
+
+    # Same for consumable materials the world models did not name directly
+    # (viewmodels, alternate ammo labels).
+    for path in sorted(config.SRC_MATERIALS.rglob("*.vmt")):
+        key = path.relative_to(config.SRC_MATERIALS).with_suffix("").as_posix().lower()
+        if key in index.materials or not config.is_consumable_material(key):
+            continue
+        _claim(index, key, "consumable", "directory", None)
 
     for entry in index.materials.values():
         _describe(entry)

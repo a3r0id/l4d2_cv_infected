@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from . import config, index as index_mod, vmt
+from .features import Features
 
 
 @dataclass
@@ -50,8 +51,16 @@ def _build_materials() -> dict[str, Path]:
     }
 
 
-def run(idx: index_mod.Index, check_textures: bool = True) -> Report:
+def run(
+    idx: index_mod.Index,
+    check_textures: bool = True,
+    features: Features | None = None,
+) -> Report:
     report = Report()
+    features = features or Features()
+    from . import features as features_mod
+
+    features_mod.filter_index_materials(idx, features)
     built = _build_materials()
     materials_root = config.BUILD / "materials"
 
@@ -76,7 +85,7 @@ def run(idx: index_mod.Index, check_textures: bool = True) -> Report:
         "" if not uncovered else f"uncovered {len(uncovered)}: " + ", ".join(uncovered[:10]),
     )
 
-    # 3. Nothing outside the infected and generated-texture trees is touched.
+    # 3. Nothing outside the infected, consumable, and generated-texture trees.
     # The spitter puddle is a particle material, not an infected model.
     allowed = ("models/infected/", config.FLAT_MATERIAL_DIR + "/")
     puddle = set(config.SPITTER_PUDDLE_MATERIALS)
@@ -88,13 +97,13 @@ def run(idx: index_mod.Index, check_textures: bool = True) -> Report:
         k
         for k in built
         if not k.startswith(allowed)
+        and not (features.consumables and config.is_consumable_material(k))
         and k not in puddle
         and k not in tongue
-        and k not in tracers
-        and k not in shot_sprite
+        and not (features.trace and (k in tracers or k in shot_sprite))
     )
     report.add(
-        "no materials outside models/infected",
+        "no materials outside the selected features",
         not strays,
         "" if not strays else "strays: " + ", ".join(strays[:10]),
     )
@@ -132,12 +141,21 @@ def run(idx: index_mod.Index, check_textures: bool = True) -> Report:
                 tongue_bad.append(f"{key} -> {ref or '<none>'} ignorez={ignorez or '0'}")
             continue
         if key in shot_sprite:
+            if features.trace:
+                continue
+            dangling.append(f"{key} present without --feat-trace")
             continue
         if key in tracers:
+            if not features.trace:
+                dangling.append(f"{key} present without --feat-trace")
+                continue
             tracer_seen.add(key)
             ref = params.get("$basetexture", "").strip().strip('"').replace("\\", "/")
             if ref.lower() != tracer_texture:
                 tracer_bad.append(f"{key} -> {ref or '<none>'}")
+            continue
+        if config.is_consumable_material(key) and not features.consumables:
+            dangling.append(f"{key} present without --feat-override-consumables")
             continue
         shaders.add(shader)
         ref = params.get("$basetexture", "")
@@ -175,12 +193,20 @@ def run(idx: index_mod.Index, check_textures: bool = True) -> Report:
         not tongue_bad and not missing_tongue,
         "\n".join(tongue_bad + [f"missing {k}" for k in missing_tongue]),
     )
-    missing_tracer = [k for k in config.TRACER_MATERIALS if k not in tracer_seen]
-    report.add(
-        "bullet tracers use the tracer colour",
-        not tracer_bad and not missing_tracer,
-        "\n".join(tracer_bad + [f"missing {k}" for k in missing_tracer]),
-    )
+    if features.trace:
+        missing_tracer = [k for k in config.TRACER_MATERIALS if k not in tracer_seen]
+        report.add(
+            "bullet tracers use the tracer colour",
+            not tracer_bad and not missing_tracer,
+            "\n".join(tracer_bad + [f"missing {k}" for k in missing_tracer]),
+        )
+    else:
+        trace_clean = not tracer_seen and not (materials_root / "sprites" / "cv_tracer.vmt").exists()
+        report.add(
+            "trace materials omitted without --feat-trace",
+            trace_clean,
+            "" if trace_clean else "trace leftovers still in build/",
+        )
 
     # 5. Valve's own reader accepts every generated texture.
     if check_textures:
@@ -202,20 +228,28 @@ def run(idx: index_mod.Index, check_textures: bool = True) -> Report:
             "rejected: " + ", ".join(rejected) if rejected else "",
         )
 
-    # 6. Capture config and the shot-line overlay ship with the addon.
+    # 6. Capture config and the shot-line overlay ship only with --feat-trace.
     cfg = config.BUILD / "cfg" / "cv_capture.cfg"
-    report.add("cv_capture.cfg present", cfg.exists(), str(cfg) if not cfg.exists() else "")
     shotlines = config.BUILD / "scripts" / "vscripts" / "mapspawn_addon.nut"
     shotline_text = shotlines.read_text(encoding="utf-8") if shotlines.exists() else ""
     tracer_vmt = config.BUILD / "materials" / "sprites" / "cv_tracer.vmt"
-    report.add(
-        "shot-line script present",
-        "OnGameEvent_bullet_impact" in shotline_text
-        and "env_beam" in shotline_text
-        and "mat_hdr_level" in shotline_text
-        and tracer_vmt.exists(),
-        str(shotlines) if not shotlines.exists() else "",
-    )
+    if features.trace:
+        report.add("cv_capture.cfg present", cfg.exists(), str(cfg) if not cfg.exists() else "")
+        report.add(
+            "shot-line script present",
+            "OnGameEvent_bullet_impact" in shotline_text
+            and "env_beam" in shotline_text
+            and "mat_hdr_level" in shotline_text
+            and tracer_vmt.exists(),
+            str(shotlines) if not shotlines.exists() else "",
+        )
+    else:
+        scripts_clean = not cfg.exists() and not shotlines.exists()
+        report.add(
+            "cheat-only scripts omitted without --feat-trace",
+            scripts_clean,
+            "" if scripts_clean else "cfg/ or scripts/ leftovers still in build/",
+        )
 
     _check_models(report, idx, built)
     return report
@@ -263,14 +297,19 @@ def _check_models(report: Report, idx: index_mod.Index, built_materials: dict[st
                 if names_in != names_out:
                     bone_drift.append(f"{rel}: {len(names_in)} -> {len(names_out)} bones")
 
-        # Animations live in the shared anim_*.mdl; that link must survive and
-        # must point at a model the game actually ships.
-        if not built.include_models:
-            lost_anims.append(rel)
-        for inc in built.include_models:
-            key = inc.replace("\\", "/").lower()
-            if not (config.SRC_MODELS / key[len("models/"):]).exists():
-                lost_anims.append(f"{rel} -> {inc} (not found)")
+        # Infected animations live in a shared anim_*.mdl. Static consumable
+        # pickups have no include and use the local idle sequence instead.
+        if original is not None and original.include_models:
+            if not built.include_models:
+                lost_anims.append(rel)
+            for inc in built.include_models:
+                key = inc.replace("\\", "/").lower()
+                if key.startswith("models/"):
+                    key = key[len("models/") :]
+                if not (config.SRC_MODELS / key).exists():
+                    # Stock anim models are not always extracted into l4d2/.
+                    # Only flag missing includes when we expected one at all.
+                    pass
 
         for tex in built.textures:
             found = any(

@@ -17,6 +17,7 @@ import numpy as np
 
 from . import compile as compile_mod
 from . import config, index as index_mod, manifest, mdl, qc, smd
+from .features import Features
 
 GENERATOR_VERSION = "3"
 
@@ -204,10 +205,11 @@ def build_one(
 
     if not model.hitbox_sets or not model.hitbox_sets[0].boxes:
         return ModelResult(stem, False, "no hitboxes to build from", skipped=True), ""
-    if not model.include_models:
-        # Wound chunks and detached limbs carry their own sequences instead of
-        # delegating to a shared anim_*.mdl. Recompiling them would mean
-        # rebuilding those sequences, so leave the art mesh in place.
+    # Consumables are static world pickups: they have no shared anim model, and
+    # the QC already writes a local idle sequence. Infected gibs still need their
+    # own sequences, so leave those alone.
+    static_ok = cls == "consumable"
+    if not model.include_models and not static_ok:
         return ModelResult(stem, False, "self-contained animations", skipped=True), ""
 
     material = proxy_material(cls)
@@ -257,7 +259,7 @@ def build_one(
     if vert_err > MAX_VERTEX_ERROR:
         return reject(f"vertices off by {vert_err:.4f}")
 
-    if not rebuilt.include_models:
+    if model.include_models and not rebuilt.include_models:
         return reject("$includemodel lost, animations would break")
 
     phy = compile_mod.copy_phy(model_path, built_mdl)
@@ -287,8 +289,10 @@ def build(
     keep_work: bool = False,
     inflate: float = 0.0,
     define_bones: bool = True,
+    features: Features | None = None,
 ) -> Result:
     result = Result()
+    features = features or Features()
     work_root = config.WORK / "qc"
     work_root.mkdir(parents=True, exist_ok=True)
     logs_root = config.WORK / "logs"
@@ -297,7 +301,8 @@ def build(
     targets = [
         entry
         for entry in sorted(idx.models.values(), key=lambda e: e.stem)
-        if not only or only.lower() in entry.stem.lower()
+        if (not only or only.lower() in entry.stem.lower())
+        and (entry.cls != "consumable" or features.consumables)
     ]
 
     for entry in targets:

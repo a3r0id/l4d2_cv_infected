@@ -7,8 +7,8 @@ My initial goal was to make the infected easier to see for a computer vision pro
 ### Features
 - Infected models are replaced with depth-test ignored hitboxes. (X-Ray)
 - Spitter puddles and Smoker tongues are also X-Ray.
-- Player projectiles are temporarily annotated with a 3D line.
-- Post-processing is optimized to provide a clear view of the scene, all without triggering common server-side checks.
+- Optional: medkits, pills, adrenaline, defibs, throwables, and ammo packs as bright white X-Ray pickups (`--feat-override-consumables`).
+- Optional: cheat-only shot tracers, capture settings, and client cfg hooks (`--feat-trace`).
 
 While this does not break TOS and uses the official SDK, this will work in servers that allow custom addons, while also bypassing the infected model integrity checks and.
 In other words, this will work just fine on those custom Chinese servers - aside from script-based things that will only take effect if the server is sv_cheats 1 - Model/material changes will work just fine, however.
@@ -36,6 +36,7 @@ Special infected are one color per class. Every common infected, including the L
 | spitter | 0, 255, 128   | Spitter                                             |
 | witch   | 255, 255, 255 | Witch and witch bride                               |
 | gibs    | 128, 0, 255   | Severed limbs and gibs (gore chunks)                |
+| consumable | 255, 255, 255 | Medkits, pills, adrenaline, defibs, molotovs, pipe bombs, bile, ammo packs |
 | tracer  | 255, 0, 128   | Each shot, for half a second. Not an infected class |
 
 
@@ -45,9 +46,9 @@ Colors live in `cvmod/config.py` (`CLASS_COLORS` and `TRACER_COLOR`). After edit
 
 ## What gets replaced
 
-1. **Materials.** Every infected VMT is replaced with a flat `VertexLitGeneric` material (`$ignorez`, `$nocull`, `$nofog`, variation disabled). Infected draw through walls and ignore fog.
-2. **Meshes.** Each infected model is recompiled as boxes built from its own hitboxes, so the silhouette is the volume bullets actually test. Animations, grabs, and hitboxes are copied from the original model.
-3. **Shots.** Each survivor bullet becomes a beam from the eyes to the server impact. A hit ends on the hitbox. A miss ends on the world. Grenades, molotovs, pipe bombs, and bile jars get the same beam while they fly. Beams last 0.5 seconds and use the tracer color, so a frame can score a hit when that color meets a class color.
+1. **Materials.** Every infected VMT is replaced with a flat `VertexLitGeneric` material (`$ignorez`, `$nocull`, `$nofog`, variation disabled, self-illuminated). They draw through walls and ignore fog. Consumable materials are included only with `--feat-override-consumables`.
+2. **Meshes.** Each infected model is recompiled as boxes built from its own hitboxes, so the silhouette is the volume bullets actually test. Animations, grabs, and hitboxes are copied from the original model. World pickups get the same treatment when consumables are enabled.
+3. **Shots.** With `--feat-trace`, each survivor bullet becomes a beam from the eyes to the server impact. A hit ends on the hitbox. A miss ends on the world. Grenades, molotovs, pipe bombs, and bile jars get the same beam while they fly. Beams last 0.5 seconds and use the tracer color.
 
 Models that only exist to play animations, and loose gibs that carry their own sequences, keep their original mesh and get the flat material instead.
 
@@ -55,13 +56,29 @@ L4D1 campaigns and The Sacrifice do not use the base special models. Those maps 
 
 ## Installation
 
-Build and install with:
+Build and install the core infected overrides with:
 
 ```
 make
 ```
 
-That finds the Steam install of Left 4 Dead 2, packs `dist/cv_infected.vpk`, and copies it to that install's `left4dead2/addons/` folder. Enable **CV Infected Override** under Extras, then Add-ons.
+Optional features:
+
+```
+make CONSUMABLES=1
+make TRACE=1
+make CONSUMABLES=1 TRACE=1
+```
+
+Or with `main.py`:
+
+```
+python main.py all --feat-override-consumables
+python main.py all --feat-trace
+python main.py all --feat-override-consumables --feat-trace
+```
+
+That finds the Steam install of Left 4 Dead 2, packs `dist/cv_infected.vpk`, and copies it to that install's `left4dead2/addons/` folder. Each deploy overwrites the previous addon and removes loose client cfg hooks that the selected features do not need. Enable **CV Infected Override** under Extras, then Add-ons.
 
 Close the game before deploying. A running game locks the VPK, and it keeps whatever addon it loaded at startup. Quit fully, then launch again.
 
@@ -82,19 +99,19 @@ Run these from this directory. `make help` prints the same list.
 
 | Command                   | What it does                                                                |
 | ------------------------- | --------------------------------------------------------------------------- |
-| `make`                    | Full rebuild: index, materials, models, pack, and deploy                    |
+| `make`                    | Full rebuild: index, materials, models, pack, and deploy (infected only)    |
 | `make colors`             | Rebuild colours, pack, and deploy. Use this after editing `cvmod/config.py` |
-| `make materials`          | Flat colours, the tracer beam, and the map script                           |
+| `make materials`          | Flat colours for the selected features                                      |
 | `make models ONLY=hunter` | One proxy mesh                                                              |
 | `make pack`               | Write `dist/cv_infected.vpk`                                                |
-| `make deploy`             | Copy that VPK into the game's `left4dead2/addons/`                          |
+| `make deploy`             | Fresh-install that VPK into the game's `left4dead2/addons/`                 |
 | `make loose`              | Deploy an unpacked `addons/cv_infected/` folder                             |
-| `make verify`             | Check the build tree                                                        |
+| `make verify`             | Check the build tree for the selected features                              |
 | `make hlmv ONLY=hunter`   | Check the build and open that model in HLMV                                 |
 | `make help`               | Print the targets                                                           |
 
 
-`FORCE=1` rebuilds even when inputs have not changed. `KEEP=1` leaves the generated compile files on disk. Example: `make models ONLY=hunter FORCE=1`.
+`FORCE=1` rebuilds even when inputs have not changed. `KEEP=1` leaves the generated compile files on disk. `CONSUMABLES=1` and `TRACE=1` enable the optional features. Example: `make models ONLY=hunter FORCE=1`.
 
 Unchanged files are skipped. Another addon that ships its own `models/infected/*.mdl` will fight this one. Only one of them wins.
 
@@ -102,9 +119,9 @@ Unchanged files are skipped. Another addon that ships its own `models/infected/*
 
 This is a client addon. It works on public servers that allow addons. Nothing here has to be hosted by you.
 
-Quit the game fully after installing. A running game keeps the addon it loaded at startup. In Extras, then Add-ons, **CV Infected Override** should say version **1.4**.
+Quit the game fully after installing. A running game keeps the addon it loaded at startup. In Extras, then Add-ons, **CV Infected Override** should say version **1.6**.
 
-`make deploy` writes `left4dead2/cfg/cv_client.cfg` and runs it from `autoexec.cfg` and from the end of `valve.rc`. That turns on your own bullet tracers and the flat capture settings the next time the game starts. A config inside the addon cannot do that. The console prints `[cv_infected] client settings applied` when it runs.
+With `TRACE=1` / `--feat-trace`, deploy also writes `left4dead2/cfg/cv_client.cfg` and runs it from `autoexec.cfg` and from the end of `valve.rc`. Without that flag, deploy removes those hooks. A config inside the addon cannot be exec'd. The console prints `[cv_infected] client settings applied` when the client cfg runs.
 
 Shots use the tracers the game already draws, recolored to **255, 0, 128**, from the muzzle to the impact. First-person tracers are off until `cv_client.cfg` runs.
 

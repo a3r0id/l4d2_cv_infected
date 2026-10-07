@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from . import config, index as index_mod, manifest, vmt, vtf
+from .features import Features
 
 # Bump when the emitted VMT/VTF layout changes, to force a rebuild.
 GENERATOR_VERSION = "3"
@@ -99,11 +100,17 @@ def build(
     mani: manifest.Manifest,
     force: bool = False,
     only: str | None = None,
+    features: Features | None = None,
 ) -> Result:
     result = Result()
+    features = features or Features()
     out_materials = config.BUILD / "materials"
 
-    used_classes = sorted({e.cls for e in idx.materials.values()} | set(config.CLASS_COLORS))
+    used_classes = sorted(
+        cls
+        for cls in ({e.cls for e in idx.materials.values()} | set(config.CLASS_COLORS))
+        if cls != "consumable" or features.consumables
+    )
 
     # Shared flat texture plus the material the phase 2 proxy meshes point at,
     # one pair per class.
@@ -129,6 +136,10 @@ def build(
 
     for key_name, entry in sorted(idx.materials.items()):
         if only and only.lower() not in key_name.lower():
+            continue
+        if entry.cls == "consumable" and not features.consumables:
+            continue
+        if config.is_consumable_material(key_name) and not features.consumables:
             continue
         unit = f"materials/{key_name}"
         color = config.CLASS_COLORS.get(entry.cls, (255, 255, 255))
@@ -177,17 +188,18 @@ def build(
         mani.record(unit, unit_key, outputs)
         result.stats.written += 1
 
-    if write_capture_cfg(mani, force=force):
-        result.stats.written += 1
-    else:
-        result.stats.skipped += 1
+    if features.trace:
+        if write_capture_cfg(mani, force=force):
+            result.stats.written += 1
+        else:
+            result.stats.skipped += 1
 
-    from . import shotlines
+        from . import shotlines
 
-    if shotlines.write(mani, force=force):
-        result.stats.written += 1
-    else:
-        result.stats.skipped += 1
+        if shotlines.write(mani, force=force):
+            result.stats.written += 1
+        else:
+            result.stats.skipped += 1
 
     if not only:
         _write_spitter_puddle(mani, force, result)
@@ -195,11 +207,15 @@ def build(
         _write_smoker_tongue(mani, force, result)
     if not only:
         _write_lightwarp(mani, force, result)
-        _write_client_tracers(mani, force, result)
+        if features.trace:
+            _write_client_tracers(mani, force, result)
 
     if not only:
         # Must run after every unit above has been touched or recorded.
+        # Units for disabled features are left untouched, so prune removes them.
         removed = mani.prune("materials/")
+        if not features.trace:
+            removed.extend(mani.prune("scripts/"))
         result.stats.removed = len(removed)
 
     return result

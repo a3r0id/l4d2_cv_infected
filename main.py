@@ -5,6 +5,8 @@ Examples:
     python main.py materials             # phase 1: flat x-ray colours
     python main.py models --only hunter  # phase 2: hitbox proxy mesh for one model
     python main.py all                   # index + materials + models + pack + deploy
+    python main.py all --feat-override-consumables
+    python main.py all --feat-trace
     python main.py deploy --loose        # fast iteration, no VPK repack
     python main.py verify --only hunter  # open the result in HLMV
 """
@@ -15,7 +17,7 @@ import argparse
 import sys
 import time
 
-from cvmod import config, index as index_mod, manifest
+from cvmod import config, features as features_mod, index as index_mod, manifest
 
 
 def _print_header(title: str) -> None:
@@ -35,10 +37,13 @@ def cmd_index(args: argparse.Namespace) -> int:
 def cmd_materials(args: argparse.Namespace) -> int:
     from cvmod import materials
 
-    _print_header("materials (phase 1)")
+    feats = features_mod.from_args(args)
+    _print_header(f"materials (phase 1) [{feats.label()}]")
     idx = index_mod.load()
     mani = manifest.Manifest.load()
-    result = materials.build(idx, mani, force=args.force, only=args.only)
+    result = materials.build(
+        idx, mani, force=args.force, only=args.only, features=feats
+    )
     mani.save()
     manifest.remove_empty_dirs(config.BUILD)
     print(result.summary())
@@ -48,10 +53,18 @@ def cmd_materials(args: argparse.Namespace) -> int:
 def cmd_models(args: argparse.Namespace) -> int:
     from cvmod import proxy
 
-    _print_header("models (phase 2)")
+    feats = features_mod.from_args(args)
+    _print_header(f"models (phase 2) [{feats.label()}]")
     idx = index_mod.load()
     mani = manifest.Manifest.load()
-    result = proxy.build(idx, mani, force=args.force, only=args.only, keep_work=args.keep_work)
+    result = proxy.build(
+        idx,
+        mani,
+        force=args.force,
+        only=args.only,
+        keep_work=args.keep_work,
+        features=feats,
+    )
     mani.save()
     manifest.remove_empty_dirs(config.BUILD)
     print(result.summary())
@@ -61,8 +74,9 @@ def cmd_models(args: argparse.Namespace) -> int:
 def cmd_pack(args: argparse.Namespace) -> int:
     from cvmod import pack
 
-    _print_header("pack")
-    path = pack.build_vpk()
+    feats = features_mod.from_args(args)
+    _print_header(f"pack [{feats.label()}]")
+    path = pack.build_vpk(feats)
     print(f"wrote {path} ({path.stat().st_size / 1024 / 1024:.2f} MB)")
     return 0
 
@@ -70,9 +84,10 @@ def cmd_pack(args: argparse.Namespace) -> int:
 def cmd_deploy(args: argparse.Namespace) -> int:
     from cvmod import pack
 
-    _print_header("deploy")
+    feats = features_mod.from_args(args)
+    _print_header(f"deploy [{feats.label()}]")
     try:
-        targets = pack.deploy(loose=args.loose)
+        targets = pack.deploy(loose=args.loose, features=feats)
     except PermissionError as exc:
         print(exc, file=sys.stderr)
         return 1
@@ -84,9 +99,10 @@ def cmd_deploy(args: argparse.Namespace) -> int:
 def cmd_verify(args: argparse.Namespace) -> int:
     from cvmod import pack, verify
 
-    _print_header("verify")
+    feats = features_mod.from_args(args)
+    _print_header(f"verify [{feats.label()}]")
     idx = index_mod.load()
-    report = verify.run(idx)
+    report = verify.run(idx, features=feats)
     print(report)
     print("\ncolour assignment:")
     print(verify.color_table(idx))
@@ -132,6 +148,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--loose", action="store_true", help="deploy an unpacked addon folder instead of a VPK")
     parser.add_argument("--keep-work", action="store_true", help="keep generated QC/SMD and studiomdl logs")
     parser.add_argument("--hlmv", action="store_true", help="also open the model viewer during verify")
+    parser.add_argument(
+        "--feat-override-consumables",
+        action="store_true",
+        help="also pack medkits, pills, throwables, and ammo packs",
+    )
+    parser.add_argument(
+        "--feat-trace",
+        action="store_true",
+        help="also pack cheat-only shot scripts, capture cfg, and client tracer hooks",
+    )
     args = parser.parse_args(argv)
 
     if not config.SRC.exists():

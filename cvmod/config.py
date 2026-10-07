@@ -123,6 +123,9 @@ CLASS_COLORS: dict[str, tuple[int, int, int]] = {
     "tank": (0, 0, 255),
     "witch": (255, 255, 255),
     "gibs": (128, 0, 255),
+    # Bright white so kits and throwables pop through walls. Same RGB as the
+    # witch; shape is what separates them in a capture.
+    "consumable": (255, 255, 255),
 }
 
 # Lower number wins when several models claim the same material. `gibs` ranks
@@ -139,6 +142,7 @@ CLASS_PRECEDENCE: dict[str, int] = {
     "spitter": 7,
     "common": 8,
     "gibs": 9,
+    "consumable": 10,
 }
 
 # Model folders whose contents are dismembered parts rather than whole infected.
@@ -182,7 +186,46 @@ MODEL_CLASS_PREFIXES: list[tuple[str, str]] = [
     ("witch", "witch"),
     ("common", "common"),
     ("cim_", "common"),
+    ("w_eq_", "consumable"),
 ]
+
+# World pickup models for medkits, pills, throwables, and ammo packs.
+CONSUMABLE_MODEL_STEMS: tuple[str, ...] = (
+    "w_eq_adrenaline",
+    "w_eq_bile_flask",
+    "w_eq_defibrillator",
+    "w_eq_defibrillator_no_paddles",
+    "w_eq_defibrillator_paddles",
+    "w_eq_explosive_ammopack",
+    "w_eq_incendiary_ammopack",
+    "w_eq_medkit",
+    "w_eq_molotov",
+    "w_eq_painpills",
+    "w_eq_pipebomb",
+)
+
+# Materials under materials/ that belong to those pickups (and their viewmodels).
+CONSUMABLE_MATERIAL_PREFIXES: tuple[str, ...] = (
+    "models/w_models/eq_adrenaline/",
+    "models/w_models/eq_ammopack/",
+    "models/w_models/eq_defibrillator/",
+    "models/w_models/eq_medkit/",
+    "models/w_models/eq_molotov/",
+    "models/w_models/eq_painpills/",
+    "models/w_models/eq_pipebomb/",
+    "models/v_models/weapons/eq_adrenaline/",
+    "models/v_models/weapons/eq_ammopack/",
+    "models/v_models/weapons/eq_bile_flask/",
+    "models/v_models/weapons/eq_defibrillator/",
+    "models/v_models/weapons/eq_medkit/",
+    "models/v_models/weapons/eq_molotov/",
+    "models/v_models/weapons/eq_painpills/",
+    "models/v_models/weapons/eq_pipebomb/",
+    "models/props/terror/explosive_ammopack",
+    "models/props/terror/incendiary_ammopack",
+    "models/props/terror/exploding_ammo",
+    "models/props/terror/incendiary_ammo",
+)
 
 # Flat render flags stamped onto every generated infected VMT.
 # L4D2's infected shader is VertexLitGeneric. It recolors each common from a
@@ -278,7 +321,7 @@ SMOKER_TONGUE_MATERIALS: tuple[str, ...] = (
 
 
 def classify_model(stem: str, rel_dirs: tuple[str, ...] = ()) -> str:
-    """Map a model onto an infected class.
+    """Map a model onto an infected or consumable class.
 
     `rel_dirs` are the folder names between models/infected/ and the file, which
     is how severed limbs and gibs are told apart from whole bodies.
@@ -290,6 +333,11 @@ def classify_model(stem: str, rel_dirs: tuple[str, ...] = ()) -> str:
         if s.startswith(prefix):
             return cls
     return "common"
+
+
+def is_consumable_material(key: str) -> bool:
+    k = key.replace("\\", "/").lower()
+    return any(k == p or k.startswith(p) for p in CONSUMABLE_MATERIAL_PREFIXES)
 
 
 def is_excluded_material(key: str) -> bool:
