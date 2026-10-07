@@ -10,10 +10,11 @@ My initial goal was to make the infected easier to see for a computer vision pro
 - Optional: medkits, pills, adrenaline, defibs, throwables, and ammo packs as bright white X-Ray pickups (`--feat-override-consumables`).
 - Optional: cheat-only shot tracers, capture settings, and client cfg hooks (`--feat-trace`).
 
-While this does not break TOS and uses the official SDK, this will work in servers that allow custom addons, while also bypassing the infected model integrity checks and.
-In other words, this will work just fine on those custom Chinese servers - aside from script-based things that will only take effect if the server is sv_cheats 1 - Model/material changes will work just fine, however.
+*This does not break Valve TOS and uses the official SDK and will work in servers that allow custom addons.
+This will work just fine on those custom Chinese servers - aside from script-based things that will only take effect if the server is sv_cheats 1 (tracers/HUD changes) - Model/material changes will work just fine.
+Cheaters suck. Please don't use this to gain some imaginary competitive edge - this is just for fun!*
 
-Model overrides directly represent the hitboxes of the infected models.
+[Clip: CV Override Initial Test](https://medal.tv/games/left-4-dead-2/clips/nFNBhWZWYpHmz7Ptk?invite=cr-MSx0N2MsMTczMjc5NzQ3)
 
 ![image](https://github.com/user-attachments/assets/0ac03cbd-5a4d-46ca-ae2d-054570b95012)
 
