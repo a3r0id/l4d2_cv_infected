@@ -12,7 +12,7 @@ ADDONINFO = """\
 "AddonInfo"
 {
 	addontitle			"CV Infected Override"
-	addonversion		"1.3"
+	addonversion		"1.4"
 	addontagline		"Flat x-ray infected for computer vision"
 	addonauthor			"cvmod pipeline"
 	addondescription	"Replaces every infected material with a flat, unlit, depth-ignoring colour, one per infected class, so frames can be segmented by exact pixel colour."

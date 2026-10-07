@@ -188,7 +188,9 @@ MODEL_CLASS_PREFIXES: list[tuple[str, str]] = [
 # L4D2's infected shader is VertexLitGeneric. It recolors each common from a
 # clothing gradient and from the entity color. Those knobs exist only on this
 # shader: UnlitGeneric ignores them, which is why commons stayed red, blue,
-# and black. A white lightwarp flattens the lighting so the baked RGB survives.
+# and black. Self-illumination is what keeps them from going dim in shadow.
+# A lightwarp only remaps the lambert term, then still multiplies by the
+# room's light, which is why indoor infected turned dark.
 RENDER_FLAGS: dict[str, str] = {
     "$model": "1",
     "$ignorez": "1",
@@ -206,7 +208,10 @@ RENDER_FLAGS: dict[str, str] = {
     "$allowdiffusemodulation": "0",
     "$blendtintbybasealpha": "0",
     "$basecolortint": "[1 1 1]",
-    "$lightwarptexture": f"{FLAT_MATERIAL_DIR}/flat_lightwarp",
+    "$selfillum": "1",
+    "$selfillumfresnel": "0",
+    "$selfillumtint": "[1 1 1]",
+    "$selfillummask": f"{FLAT_MATERIAL_DIR}/flat_lightwarp",
 }
 
 LIGHTWARP_COLOR: tuple[int, int, int] = (255, 255, 255)

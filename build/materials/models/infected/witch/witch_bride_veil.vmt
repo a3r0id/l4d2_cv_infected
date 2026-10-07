@@ -17,7 +17,10 @@ VertexLitGeneric
 	$allowdiffusemodulation "0"
 	$blendtintbybasealpha   "0"
 	$basecolortint          "[1 1 1]"
-	$lightwarptexture       "models/cvmod/flat_lightwarp"
+	$selfillum              "1"
+	$selfillumfresnel       "0"
+	$selfillumtint          "[1 1 1]"
+	$selfillummask          "models/cvmod/flat_lightwarp"
 	$alphatest              "1"
 	$allowalphatocoverage   "0"
 }

@@ -39,7 +39,7 @@ Special infected are one color per class. Every common infected, including the L
 | tracer  | 255, 0, 128   | Each shot, for half a second. Not an infected class |
 
 
-The color is baked into the texture. L4D2's infected shader still recolors each common unless the material turns that off, which is why some stayed red, blue, or black. These materials set `$disablevariation 1` and `$allowdiffusemodulation 0` on `VertexLitGeneric`, and a white lightwarp keeps the lighting from shifting the RGB.
+The color is baked into the texture. L4D2's infected shader still recolors each common unless the material turns that off, which is why some stayed red, blue, or black. These materials set `$disablevariation 1` and `$allowdiffusemodulation 0` on `VertexLitGeneric`, and `$selfillum 1` so shadows do not dim them.
 
 Colors live in `cvmod/config.py` (`CLASS_COLORS` and `TRACER_COLOR`). After editing them, run `make colors`.
 
@@ -102,7 +102,7 @@ Unchanged files are skipped. Another addon that ships its own `models/infected/*
 
 This is a client addon. It works on public servers that allow addons. Nothing here has to be hosted by you.
 
-Quit the game fully after installing. A running game keeps the addon it loaded at startup. In Extras, then Add-ons, **CV Infected Override** should say version **1.3**.
+Quit the game fully after installing. A running game keeps the addon it loaded at startup. In Extras, then Add-ons, **CV Infected Override** should say version **1.4**.
 
 `make deploy` writes `left4dead2/cfg/cv_client.cfg` and runs it from `autoexec.cfg` and from the end of `valve.rc`. That turns on your own bullet tracers and the flat capture settings the next time the game starts. A config inside the addon cannot do that. The console prints `[cv_infected] client settings applied` when it runs.
 

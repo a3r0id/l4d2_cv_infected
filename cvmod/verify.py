@@ -143,9 +143,11 @@ def run(idx: index_mod.Index, check_textures: bool = True) -> Report:
         ref = params.get("$basetexture", "")
         if not ref or not (materials_root / f"{ref}.vtf").exists():
             dangling.append(f"{key} -> {ref or '<none>'}")
-        warp = params.get("$lightwarptexture", "").strip().strip('"').replace("\\", "/")
-        if warp and not (materials_root / f"{warp}.vtf").exists():
-            dangling.append(f"{key} lightwarp -> {warp}")
+        mask = params.get("$selfillummask", "").strip().strip('"').replace("\\", "/")
+        if params.get("$selfillum", "").strip().strip('"') != "1" or not mask:
+            dangling.append(f"{key} missing $selfillum")
+        elif not (materials_root / f"{mask}.vtf").exists():
+            dangling.append(f"{key} selfillum mask -> {mask}")
         if params.get("$disablevariation", "").strip().strip('"') != "1":
             dangling.append(f"{key} missing $disablevariation 1")
         if params.get("$allowdiffusemodulation", "").strip().strip('"') != "0":

@@ -335,11 +335,7 @@ def _write_smoker_tongue(mani: manifest.Manifest, force: bool, result: Result) -
 
 
 def _write_lightwarp(mani: manifest.Manifest, force: bool, result: Result) -> None:
-    """White ramp so VertexLitGeneric's lighting term stays 1.
-
-    The infected shader multiplies the texture by this lookup. Every texel is
-    white, so a shaded pixel keeps the baked class color.
-    """
+    """Solid white mask so self-illumination covers the whole infected."""
     out_materials = config.BUILD / "materials"
     dest = out_materials / f"{config.FLAT_MATERIAL_DIR}/flat_lightwarp.vtf"
     data = vtf.build(config.LIGHTWARP_COLOR)
