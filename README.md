@@ -13,7 +13,7 @@ My initial goal was to make the infected easier to see for a computer vision pro
 *While this does not break TOS and uses the official SDK, this will work in servers that allow custom addons, while also bypassing the infected model integrity checks and,
 in other words, this will work just fine on those custom Chinese servers - aside from script-based things that will only take effect if the server is sv_cheats 1 (tracers/HUD changes) - Model/material changes will work just fine, however.*
 
-[CV Override Video](https://medal.tv/games/left-4-dead-2/clips/nFNBhWZWYpHmz7Ptk?invite=cr-MSx0N2MsMTczMjc5NzQ3)
+[Clip: CV Override Initial Test](https://medal.tv/games/left-4-dead-2/clips/nFNBhWZWYpHmz7Ptk?invite=cr-MSx0N2MsMTczMjc5NzQ3)
 
 ![image](https://github.com/user-attachments/assets/0ac03cbd-5a4d-46ca-ae2d-054570b95012)
 
