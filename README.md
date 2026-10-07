@@ -10,8 +10,9 @@ My initial goal was to make the infected easier to see for a computer vision pro
 - Player projectiles are temporarily annotated with a 3D line.
 - Post-processing is optimized to provide a clear view of the scene, all without triggering common server-side checks.
 
-*While this does not break TOS and uses the official SDK, this will work in servers that allow custom addons, while also bypassing the infected model integrity checks and,
-in other words, this will work just fine on those custom Chinese servers - aside from script-based things that will only take effect if the server is sv_cheats 1 (tracers/HUD changes) - Model/material changes will work just fine, however.*
+*This does not break Valve TOS and uses the official SDK and will work in servers that allow custom addons.
+This does however, bypass the infected model integrity checks.
+This will work just fine on those custom Chinese servers - aside from script-based things that will only take effect if the server is sv_cheats 1 (tracers/HUD changes) - Model/material changes will work just fine.*
 
 [Clip: CV Override Initial Test](https://medal.tv/games/left-4-dead-2/clips/nFNBhWZWYpHmz7Ptk?invite=cr-MSx0N2MsMTczMjc5NzQ3)
 
