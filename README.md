@@ -44,7 +44,7 @@ Special infected are one color per class. Every common infected, including the L
 | jockey  | 255, 255, 0   | Jockey                                              |
 | spitter | 0, 255, 128   | Spitter                                             |
 | witch   | 255, 255, 255 | Witch and witch bride                               |
-| gibs    | 128, 0, 255   | Severed limbs and gibs (gore chunks)                |
+| gibs    | 0, 0, 0       | Severed limbs and gibs (gore chunks)                |
 | consumable | 255, 255, 255 | Medkits, pills, adrenaline, defibs, molotovs, pipe bombs, bile, ammo packs |
 | tracer  | 255, 0, 128   | Each shot, for half a second. Not an infected class |
 
@@ -64,6 +64,8 @@ Models that only exist to play animations, and loose gibs that carry their own s
 L4D1 campaigns and The Sacrifice do not use the base special models. Those maps spawn `hunter_l4d1`, `smoker_l4d1`, `boomer_l4d1`, and `hulk_l4d1`. A few Sacrifice maps spawn `hulk_dlc3` instead. The addon replaces those variants too. Common infected on those campaigns (`common_police_male01`, `common_male01`, `common_military_male01`, and the other L4D1 bodies) are included and colored pink.
 
 ## Installation
+
+*If you only need the core overrides then simply move [the VPK addon](https://github.com/a3r0id/l4d2_cv_infected/blob/main/dist/cv_infected.vpk) to path/to/your/L4D2/addons/cv_infected.vpk.*
 
 Build and install the core infected overrides with:
 
