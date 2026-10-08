@@ -1,13 +1,15 @@
-"""Paths, tool locations and the infected class/colour table."""
+"""Paths, tool locations, and tunables loaded from config.json."""
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import winreg
 from pathlib import Path
 
 HELPERS = Path(__file__).resolve().parent.parent
+CONFIG_JSON = HELPERS / "config.json"
 
 
 def _is_game_root(path: Path) -> bool:
@@ -53,6 +55,27 @@ def _find_game_root() -> Path | None:
     return None
 
 
+def _rgb(value: list[int] | tuple[int, ...]) -> tuple[int, int, int]:
+    if len(value) != 3:
+        raise ValueError(f"expected RGB triple, got {value!r}")
+    return int(value[0]), int(value[1]), int(value[2])
+
+
+def _commands(mapping: dict[str, str]) -> list[tuple[str, str]]:
+    return [(str(name), str(value)) for name, value in mapping.items()]
+
+
+def _load_user_config() -> dict:
+    if not CONFIG_JSON.is_file():
+        raise FileNotFoundError(f"missing {CONFIG_JSON}")
+    raw = json.loads(CONFIG_JSON.read_text(encoding="utf-8"))
+    if not isinstance(raw, dict):
+        raise ValueError(f"{CONFIG_JSON} must contain a JSON object")
+    return raw
+
+
+_USER = _load_user_config()
+
 GAME_ROOT = _find_game_root() or (HELPERS.parent.parent.parent)
 GAME_DIR = GAME_ROOT / "left4dead2"
 ADDONS_DIR = GAME_DIR / "addons"
@@ -73,265 +96,69 @@ MANIFEST_JSON = WORK / "manifest.json"
 STUDIOMDL = GAME_ROOT / "bin" / "studiomdl.exe"
 VPK_EXE = GAME_ROOT / "bin" / "vpk.exe"
 HLMV = GAME_ROOT / "bin" / "hlmv.exe"
-VPKEDIT_CLI = Path(r"C:\Program Files\VPKEdit\vpkeditcli.exe")
+VPKEDIT_CLI = Path(_USER.get("vpkedit_cli", r"C:\Program Files\VPKEdit\vpkeditcli.exe"))
 
-ADDON_NAME = "cv_infected"
+ADDON_NAME = str(_USER.get("addon_name", "cv_infected"))
 VPK_PATH = DIST / f"{ADDON_NAME}.vpk"
 
-# Where generated flat textures live inside the addon.
-FLAT_MATERIAL_DIR = "models/cvmod"
+FLAT_MATERIAL_DIR = str(_USER.get("flat_material_dir", "models/cvmod"))
 
-# Shot traces. Not a class colour, so a frame can separate a bullet path from
-# every infected. Beams using this colour last under a second.
-TRACER_COLOR: tuple[int, int, int] = (255, 0, 128)
-TRACER_SECONDS: float = 0.5
+TRACER_COLOR: tuple[int, int, int] = _rgb(_USER["tracer_color"])
+TRACER_SECONDS: float = float(_USER["tracer_seconds"])
+LIGHTWARP_COLOR: tuple[int, int, int] = _rgb(_USER["lightwarp_color"])
 
-# Listen-server capture settings. Applied by the map script. `exec` cannot read
-# a cfg that only exists inside an addon VPK, so these are not a manual step.
-# `sv_cheats 1` comes first because `fog_override` is marked as a cheat.
-CAPTURE_COMMANDS: list[tuple[str, str]] = [
-    ("sv_cheats", "1"),
-    ("mat_hdr_level", "0"),
-    ("mat_bloomscale", "0"),
-    ("mat_disable_bloom", "1"),
-    ("mat_colorcorrection", "0"),
-    ("mat_motion_blur_enabled", "0"),
-    ("mat_grain_scale_override", "0"),
-    ("mat_antialias", "0"),
-    ("mat_software_aa_strength", "0"),
-    ("mat_specular", "0"),
-    ("r_dynamic", "0"),
-    ("muzzleflash_light", "0"),
-    ("fog_override", "1"),
-    ("fog_enable", "0"),
-    ("r_drawviewmodel", "0"),
-    ("cl_drawhud", "0"),
-    ("net_graph", "0"),
-    ("sv_consistency", "0"),
-    ("sv_pure", "0"),
-]
-
-# Saturated and mutually separable, and far from L4D2's brown/grey palette.
 CLASS_COLORS: dict[str, tuple[int, int, int]] = {
-    "common": (255, 0, 255),
-    "boomer": (0, 255, 0),
-    "hunter": (0, 255, 255),
-    "smoker": (255, 128, 0),
-    "charger": (255, 0, 0),
-    "jockey": (255, 255, 0),
-    "spitter": (0, 255, 128),
-    "tank": (0, 0, 255),
-    "witch": (255, 255, 255),
-    "gibs": (128, 0, 255),
-    # Bright white so kits and throwables pop through walls. Same RGB as the
-    # witch; shape is what separates them in a capture.
-    "consumable": (255, 255, 255),
+    name: _rgb(color) for name, color in _USER["class_colors"].items()
 }
-
-# Lower number wins when several models claim the same material. `gibs` ranks
-# below `common` on purpose: wound materials are shared between severed limbs
-# and living bodies, and the living body is what is on screen most.
 CLASS_PRECEDENCE: dict[str, int] = {
-    "witch": 0,
-    "tank": 1,
-    "charger": 2,
-    "hunter": 3,
-    "smoker": 4,
-    "boomer": 5,
-    "jockey": 6,
-    "spitter": 7,
-    "common": 8,
-    "gibs": 9,
-    "consumable": 10,
+    name: int(rank) for name, rank in _USER["class_precedence"].items()
 }
 
-# Model folders whose contents are dismembered parts rather than whole infected.
-GIB_DIRS = {"gibs", "limbs"}
-
-# Materials the pipeline must never touch. `debug/debugempty` is referenced by
-# the Charger for a deliberately invisible mesh; flattening it would make that
-# mesh render.
-MATERIAL_EXCLUDE_PREFIXES: tuple[str, ...] = (
-    "debug/",
-    "models/debug/",
-    "effects/",
-    "engine/",
-    "tools/",
+GIB_DIRS = {str(d) for d in _USER["gib_dirs"]}
+MATERIAL_EXCLUDE_PREFIXES: tuple[str, ...] = tuple(
+    str(p) for p in _USER["material_exclude_prefixes"]
 )
-
-# Model filename stem -> class. Checked as prefixes, longest first.
 MODEL_CLASS_PREFIXES: list[tuple[str, str]] = [
-    ("anim_common_male_exp", "common"),
-    ("anim_common_vomit", "common"),
-    ("common_fem_infected", "common"),
-    ("common_male_infected", "common"),
-    ("common_shadertest", "common"),
-    ("anim_common", "common"),
-    ("anim_hulk", "tank"),
-    ("anim_boomer", "boomer"),
-    ("anim_charger", "charger"),
-    ("anim_hunter", "hunter"),
-    ("anim_jockey", "jockey"),
-    ("anim_smoker", "smoker"),
-    ("anim_spitter", "spitter"),
-    ("anim_witch", "witch"),
-    ("boomette", "boomer"),
-    ("boomer", "boomer"),
-    ("charger", "charger"),
-    ("hulk", "tank"),
-    ("hunter", "hunter"),
-    ("jockey", "jockey"),
-    ("smoker", "smoker"),
-    ("spitter", "spitter"),
-    ("witch", "witch"),
-    ("common", "common"),
-    ("cim_", "common"),
-    ("w_eq_", "consumable"),
+    (str(prefix), str(cls)) for prefix, cls in _USER["model_class_prefixes"]
 ]
 
-# World pickup models for medkits, pills, throwables, and ammo packs.
-CONSUMABLE_MODEL_STEMS: tuple[str, ...] = (
-    "w_eq_adrenaline",
-    "w_eq_bile_flask",
-    "w_eq_defibrillator",
-    "w_eq_defibrillator_no_paddles",
-    "w_eq_defibrillator_paddles",
-    "w_eq_explosive_ammopack",
-    "w_eq_incendiary_ammopack",
-    "w_eq_medkit",
-    "w_eq_molotov",
-    "w_eq_painpills",
-    "w_eq_pipebomb",
+CONSUMABLE_MODEL_STEMS: tuple[str, ...] = tuple(
+    str(s) for s in _USER["consumable_model_stems"]
+)
+CONSUMABLE_MATERIAL_PREFIXES: tuple[str, ...] = tuple(
+    str(p) for p in _USER["consumable_material_prefixes"]
 )
 
-# Materials under materials/ that belong to those pickups (and their viewmodels).
-CONSUMABLE_MATERIAL_PREFIXES: tuple[str, ...] = (
-    "models/w_models/eq_adrenaline/",
-    "models/w_models/eq_ammopack/",
-    "models/w_models/eq_defibrillator/",
-    "models/w_models/eq_medkit/",
-    "models/w_models/eq_molotov/",
-    "models/w_models/eq_painpills/",
-    "models/w_models/eq_pipebomb/",
-    "models/v_models/weapons/eq_adrenaline/",
-    "models/v_models/weapons/eq_ammopack/",
-    "models/v_models/weapons/eq_bile_flask/",
-    "models/v_models/weapons/eq_defibrillator/",
-    "models/v_models/weapons/eq_medkit/",
-    "models/v_models/weapons/eq_molotov/",
-    "models/v_models/weapons/eq_painpills/",
-    "models/v_models/weapons/eq_pipebomb/",
-    "models/props/terror/explosive_ammopack",
-    "models/props/terror/incendiary_ammopack",
-    "models/props/terror/exploding_ammo",
-    "models/props/terror/incendiary_ammo",
-)
-
-# Flat render flags stamped onto every generated infected VMT.
-# L4D2's infected shader is VertexLitGeneric. It recolors each common from a
-# clothing gradient and from the entity color. Those knobs exist only on this
-# shader: UnlitGeneric ignores them, which is why commons stayed red, blue,
-# and black. Self-illumination is what keeps them from going dim in shadow.
-# A lightwarp only remaps the lambert term, then still multiplies by the
-# room's light, which is why indoor infected turned dark.
 RENDER_FLAGS: dict[str, str] = {
-    "$model": "1",
-    "$ignorez": "1",
-    "$nocull": "1",
-    "$nofog": "1",
-    "$nodecal": "1",
-    "$halflambert": "0",
-    "$phong": "0",
-    "$ambientocclusion": "0",
-    "$shinyblood": "0",
-    "$burning": "0",
-    "$wounded": "0",
-    "$eyeglow": "0",
-    "$disablevariation": "1",
-    "$allowdiffusemodulation": "0",
-    "$blendtintbybasealpha": "0",
-    "$basecolortint": "[1 1 1]",
-    "$selfillum": "1",
-    "$selfillumfresnel": "0",
-    "$selfillumtint": "[1 1 1]",
-    "$selfillummask": f"{FLAT_MATERIAL_DIR}/flat_lightwarp",
+    str(key): str(value) for key, value in _USER["render_flags"].items()
 }
+# Always point the self-illum mask at the shared white warp under flat_material_dir.
+RENDER_FLAGS["$selfillummask"] = f"{FLAT_MATERIAL_DIR}/flat_lightwarp"
 
-LIGHTWARP_COLOR: tuple[int, int, int] = (255, 255, 255)
+TRACER_MATERIALS: tuple[str, ...] = tuple(str(m) for m in _USER["tracer_materials"])
 
-# Bullet streaks the client already draws. Recolouring them is what shows a
-# shot on a public server. The listen-server script cannot run there.
-TRACER_MATERIALS: tuple[str, ...] = (
-    "particle/particle_glow_05_additive",
-    "sprites/laserbeam",
+CAPTURE_COMMANDS: list[tuple[str, str]] = _commands(_USER["capture_commands"])
+CLIENT_COMMANDS: tuple[tuple[str, str], ...] = tuple(_commands(_USER["client_commands"]))
+CLEANUP_COMMANDS: tuple[tuple[str, str], ...] = tuple(_commands(_USER["cleanup_commands"]))
+
+ALPHA_PRESERVE: set[str] = {str(k) for k in _USER["alpha_preserve"]}
+ADDITIVE_PRESERVE: set[str] = {str(k) for k in _USER["additive_preserve"]}
+
+SPITTER_PUDDLE_MATERIALS: tuple[str, ...] = tuple(
+    str(m) for m in _USER["spitter_puddle_materials"]
+)
+SMOKER_TONGUE_MATERIALS: tuple[str, ...] = tuple(
+    str(m) for m in _USER["smoker_tongue_materials"]
 )
 
-# Client settings. Written to the game's cfg folder on deploy, then exec'd
-# from autoexec, so they apply on any server. Server cvars are not in here.
-CLIENT_COMMANDS: tuple[tuple[str, str], ...] = (
-    ("r_drawtracers", "1"),
-    ("r_drawtracers_firstperson", "1"),
-    ("z_do_tracers", "1"),
-    ("z_tracer_spacing", "1"),
-    ("mat_hdr_level", "0"),
-    ("mat_bloomscale", "0"),
-    ("mat_disable_bloom", "1"),
-    ("mat_colorcorrection", "0"),
-    ("mat_motion_blur_enabled", "0"),
-    ("mat_grain_scale_override", "0"),
-    ("mat_antialias", "0"),
-    ("mat_software_aa_strength", "0"),
-    ("mat_specular", "0"),
-    ("r_dynamic", "0"),
-    ("muzzleflash_light", "0"),
-    ("r_drawviewmodel", "0"),
-    ("cl_drawhud", "0"),
-    ("net_graph", "0"),
-)
-
-# Cap clutter between shots. Paired with the MOUSE1 cleanup alias in
-# cv_cleanup.cfg (--feat-cleanup). These are client-side and safe on public servers.
-CLEANUP_COMMANDS: tuple[tuple[str, str], ...] = (
-    # 0 = show no client ragdolls. Clears still run so leftovers from before
-    # the cvar applied do not stick around.
-    ("cl_ragdoll_limit", "0"),
-    ("ragdoll_sleepaftertime", "0.25"),
-    ("r_decals", "1"),
-    ("r_drawmodeldecals", "0"),
-    ("func_break_max_pieces", "0"),
-    ("violence_hblood", "0"),
-    ("violence_hgibs", "0"),
-)
-
-# Materials that must keep their alpha cutout instead of becoming solid quads.
-# Relative to materials/, forward slashes, lowercase, no extension.
-ALPHA_PRESERVE: set[str] = {
-    "models/infected/boomer/boomer_hair",
-    "models/infected/smoker/boomer_hair",
-    "models/infected/witch/witch_hair",
+# name -> {src, dest[]}. Installed into the game tree with --feat-sounds.
+CUSTOM_SOUND_GENERATOR: dict[str, dict] = {
+    str(name): {
+        "src": str(body["src"]),
+        "dest": [str(d) for d in body.get("dest", [])],
+    }
+    for name, body in (_USER.get("custom_sound_generator") or {}).items()
 }
-ADDITIVE_PRESERVE: set[str] = {
-    "models/infected/common/l4d2/cim_ceda_faceplate",
-}
-
-# Spitter ground bile. These particle materials are referenced only by
-# particles/spitter_fx.pcf, so giving them $ignorez does not x-ray rain,
-# blood or weapon effects. The flat green disc is pool_01_oriented; the
-# others are its refraction, splash, foam and the slime spots it leaves.
-SPITTER_PUDDLE_MATERIALS: tuple[str, ...] = (
-    "particle/pool_01_oriented",
-    "particle/warp_pool_01",
-    "particle/water_splash/water_splash_add_nodepth",
-    "particle/water_splash/water_splash_addself_nodepth",
-    "particle/droplets/droplets_oriented_add_nodepth",
-)
-
-# The tongue that flies out and can be shot is a rope plus a joint sprite.
-# smoker.mdl does not reference them, so the body override never reaches them.
-SMOKER_TONGUE_MATERIALS: tuple[str, ...] = (
-    "particle/smoker_tongue_beam",
-    "particle/smoker_tongue_joint",
-)
 
 
 def classify_model(stem: str, rel_dirs: tuple[str, ...] = ()) -> str:

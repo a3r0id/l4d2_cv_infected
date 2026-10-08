@@ -14,6 +14,8 @@ CLIENT_EXEC_LINE = "exec cv_client"
 CLIENT_CFG_NAME = "cv_client.cfg"
 CLEANUP_EXEC_LINE = "exec cv_cleanup"
 CLEANUP_CFG_NAME = "cv_cleanup.cfg"
+CLEANUP_RESTORE_EXEC_LINE = "exec cv_cleanup_restore"
+CLEANUP_RESTORE_CFG_NAME = "cv_cleanup_restore.cfg"
 
 
 def addoninfo_text(features: Features) -> str:
@@ -24,6 +26,8 @@ def addoninfo_text(features: Features) -> str:
         parts.append("trace")
     if features.cleanup:
         parts.append("cleanup")
+    if features.sounds:
+        parts.append("sounds")
     tag = ", ".join(parts)
     desc = (
         "Replaces infected materials with flat, depth-ignoring colours for computer vision."
@@ -33,13 +37,15 @@ def addoninfo_text(features: Features) -> str:
     if features.trace:
         desc += " Includes cheat-only shot tracers and capture settings."
     if features.cleanup:
-        desc += " Clears ragdolls and decals when shooting."
+        desc += " Caps ragdolls/decals; C clears clutter."
+    if features.sounds:
+        desc += " Ships custom sound replacements."
     weapon = "1" if features.consumables else "0"
     return f"""\
 "AddonInfo"
 {{
 	addontitle			"CV Infected Override"
-	addonversion		"1.7"
+	addonversion		"1.8"
 	addontagline		"Flat x-ray overrides ({tag})"
 	addonauthor			"cvmod pipeline"
 	addondescription	"{desc}"
@@ -118,9 +124,11 @@ def build_vpk(features: Features | None = None) -> Path:
 def deploy(loose: bool = False, features: Features | None = None) -> list[Path]:
     """Install into left4dead2/addons/, replacing any previous install.
 
-    Optional cfg hooks from a prior --feat-trace / --feat-cleanup install are
-    removed when those features are off, so each deploy is a clean slate.
+    Optional cfg hooks and custom sounds from prior feature installs are removed
+    when those features are off, so each deploy is a clean slate.
     """
+    from . import sounds
+
     features = features or Features()
     config.ADDONS_DIR.mkdir(parents=True, exist_ok=True)
     vpk_target = config.ADDONS_DIR / f"{config.ADDON_NAME}.vpk"
@@ -160,6 +168,11 @@ def deploy(loose: bool = False, features: Features | None = None) -> list[Path]:
     written.extend(installed)
     for path in cleaned:
         print(f"cleaned {path}")
+
+    sound_installed, sound_cleaned = sounds.sync(features.sounds)
+    written.extend(sound_installed)
+    for path in sound_cleaned:
+        print(f"cleaned {path}")
     return written
 
 
@@ -179,12 +192,14 @@ def _strip_exec_line(path: Path, line: str) -> bool:
     return True
 
 
-def _ensure_exec_line(path: Path, line: str) -> None:
+def _ensure_exec_line(path: Path, line: str) -> bool:
+    """Append `line` when missing. Returns True when the file changed."""
     existing = path.read_text(encoding="utf-8", errors="replace") if path.exists() else ""
     if line in existing:
-        return
+        return False
     suffix = "" if existing.endswith("\n") or not existing else "\n"
     path.write_text(existing + suffix + line + "\n", encoding="utf-8")
+    return True
 
 
 def _ensure_valve_exec(valve: Path, line: str) -> None:
@@ -199,30 +214,73 @@ def _ensure_valve_exec(valve: Path, line: str) -> None:
     valve.write_text("\n".join(kept) + "\n", encoding="utf-8")
 
 
-def _restore_mouse1_attack(cfg_dir: Path) -> list[Path]:
-    """Put MOUSE1 back on +attack after removing the cleanup aliases."""
-    touched: list[Path] = []
-    config_cfg = cfg_dir / "config.cfg"
-    if not config_cfg.exists():
-        return touched
-    text = config_cfg.read_text(encoding="utf-8", errors="replace")
-    new_text, count = re.subn(
-        r'(?im)^(\s*bind\s+"MOUSE1"\s+)"[^"]*"',
-        r'\1"+attack"',
-        text,
+def _cleanup_restore_body() -> str:
+    """Put stock binds back when --feat-cleanup is removed."""
+    return "\n".join(
+        [
+            "// cv_infected cleanup uninstall. Restores stock binds.",
+            'bind "MOUSE1" "+attack"',
+            'bind "MOUSE3" "+zoom"',
+            'bind "c" "+voicerecord"',
+            'echo "[cv_infected] shot cleanup removed"',
+            "",
+        ]
     )
-    if count:
-        config_cfg.write_text(new_text, encoding="utf-8")
-        touched.append(config_cfg)
+
+
+def _restore_cleanup_binds(cfg_dir: Path) -> list[Path]:
+    """Restore stock binds after removing --feat-cleanup."""
+    touched: list[Path] = []
+    restore_path = cfg_dir / CLEANUP_RESTORE_CFG_NAME
+    restore_path.write_text(_cleanup_restore_body(), encoding="utf-8")
+    touched.append(restore_path)
+
+    # Persist into config.cfg so the next launch keeps stock binds even if the
+    # one-shot restore cfg is not exec'd again.
+    config_cfg = cfg_dir / "config.cfg"
+    if config_cfg.exists():
+        text = config_cfg.read_text(encoding="utf-8", errors="replace")
+        new_text, n1 = re.subn(
+            r'(?im)^(\s*bind\s+"MOUSE1"\s+)"[^"]*"',
+            r'\1"+attack"',
+            text,
+        )
+        new_text, n3 = re.subn(
+            r'(?im)^(\s*bind\s+"MOUSE3"\s+)"[^"]*"',
+            r'\1"+zoom"',
+            new_text,
+        )
+        new_text, nc = re.subn(
+            r'(?im)^(\s*bind\s+"c"\s+)"[^"]*"',
+            r'\1"+voicerecord"',
+            new_text,
+        )
+        if n1 or n3 or nc:
+            config_cfg.write_text(new_text, encoding="utf-8")
+            touched.append(config_cfg)
+
+    autoexec = cfg_dir / "autoexec.cfg"
+    if _ensure_exec_line(autoexec, CLEANUP_RESTORE_EXEC_LINE):
+        touched.append(autoexec)
     return touched
 
 
 def _cleanup_cfg_body() -> str:
-    """MOUSE1 clears clutter on press and release; caps keep the scene sparse."""
+    """Clear clutter without breaking the Fire key glyph.
+
+    L4D2's "Press [key] to play as ..." looks up which key is bound to the
+    exact command `+attack`. Binding MOUSE1 to an alias (`+cv_attack`) or to
+    `+attack; cl_cleanup` makes that lookup fail and shows [?].
+
+    Keep MOUSE1 bound to the exact string `+attack`. Clutter is limited by the
+    cleanup cvars; C runs an on-demand clear. Do not alias `+attack` itself —
+    that recurses and can hang the client.
+    """
     lines = [
         "// cv_infected shot cleanup. Installed with --feat-cleanup.",
-        "// Clears ragdolls/decals when you press or release fire. Caps keep",
-        "// new clutter from building up between shots without per-frame work.",
+        "// Caps keep ragdolls/decals sparse. C clears on demand.",
+        "// MOUSE1 must stay bound to the exact string +attack so takeover UI",
+        '// can show "Press [MOUSE1] to play as ..." instead of [?].',
         "",
     ]
     lines.extend(f"{name} {value}" for name, value in config.CLEANUP_COMMANDS)
@@ -230,13 +288,14 @@ def _cleanup_cfg_body() -> str:
         [
             "",
             'alias "cl_cleanup" "r_cleardecals; cl_destroy_ragdolls"',
-            # Paired +/- aliases keep -attack on mouse-up. A bare
-            # bind MOUSE1 "+attack; cl_cleanup" can drop the release.
-            'alias "+cv_attack" "+attack; cl_cleanup"',
-            'alias "-cv_attack" "-attack; cl_cleanup"',
-            'bind "MOUSE1" "+cv_attack"',
-            # Mid-spray clear without letting go of the trigger.
-            'bind "MOUSE3" "cl_cleanup"',
+            # Drop any previous wrap that stole the Fire glyph.
+            'alias "+cv_attack" "+attack"',
+            'alias "-cv_attack" "-attack"',
+            'bind "MOUSE1" "+attack"',
+            # Scope stays on MOUSE3; C is unused for most players (stock: voice).
+            'bind "MOUSE3" "+zoom"',
+            'bind "c" "cl_cleanup"',
+            "cl_cleanup",
             "",
             'echo "[cv_infected] shot cleanup applied"',
             "",
@@ -284,16 +343,22 @@ def sync_loose_cfgs(features: Features) -> tuple[list[Path], list[Path]]:
             cleaned.append(valve)
 
     cleanup_path = cfg_dir / CLEANUP_CFG_NAME
+    restore_path = cfg_dir / CLEANUP_RESTORE_CFG_NAME
     if features.cleanup:
         cleanup_path.write_text(_cleanup_cfg_body(), encoding="utf-8")
         installed.append(cleanup_path)
         _ensure_exec_line(autoexec, CLEANUP_EXEC_LINE)
+        if _strip_exec_line(autoexec, CLEANUP_RESTORE_EXEC_LINE):
+            pass
         if autoexec not in installed:
             installed.append(autoexec)
         # After stuffcmds so launch options cannot steal MOUSE1 back.
         _ensure_valve_exec(valve, CLEANUP_EXEC_LINE)
         if valve not in installed:
             installed.append(valve)
+        if restore_path.exists():
+            restore_path.unlink()
+            cleaned.append(restore_path)
     else:
         if cleanup_path.exists():
             cleanup_path.unlink()
@@ -304,7 +369,7 @@ def sync_loose_cfgs(features: Features) -> tuple[list[Path], list[Path]]:
         if _strip_exec_line(valve, CLEANUP_EXEC_LINE):
             if valve not in cleaned:
                 cleaned.append(valve)
-        for path in _restore_mouse1_attack(cfg_dir):
+        for path in _restore_cleanup_binds(cfg_dir):
             cleaned.append(path)
 
     return installed, cleaned

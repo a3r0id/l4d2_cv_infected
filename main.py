@@ -8,6 +8,7 @@ Examples:
     python main.py all --feat-override-consumables
     python main.py all --feat-trace
     python main.py all --feat-cleanup
+    python main.py all --feat-sounds
     python main.py deploy --loose        # fast iteration, no VPK repack
     python main.py verify --only hunter  # open the result in HLMV
 """
@@ -163,6 +164,11 @@ def main(argv: list[str] | None = None) -> int:
         "--feat-cleanup",
         action="store_true",
         help="also patch autoexec to clear ragdolls and decals when shooting",
+    )
+    parser.add_argument(
+        "--feat-sounds",
+        action="store_true",
+        help="also convert and install custom sounds from config.json",
     )
     args = parser.parse_args(argv)
 

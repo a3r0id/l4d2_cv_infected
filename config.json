@@ -1,0 +1,260 @@
+{
+  "addon_name": "cv_infected",
+  "flat_material_dir": "models/cvmod",
+  "vpkedit_cli": "C:\\Program Files\\VPKEdit\\vpkeditcli.exe",
+
+  "tracer_color": [255, 0, 128],
+  "tracer_seconds": 0.5,
+  "lightwarp_color": [255, 255, 255],
+
+  "class_colors": {
+    "common": [255, 0, 255],
+    "boomer": [0, 255, 0],
+    "hunter": [0, 255, 255],
+    "smoker": [255, 128, 0],
+    "charger": [255, 0, 0],
+    "jockey": [255, 255, 0],
+    "spitter": [0, 255, 128],
+    "tank": [0, 0, 255],
+    "witch": [255, 255, 255],
+    "gibs": [0, 0, 0],
+    "consumable": [255, 255, 255]
+  },
+
+  "class_precedence": {
+    "witch": 0,
+    "tank": 1,
+    "charger": 2,
+    "hunter": 3,
+    "smoker": 4,
+    "boomer": 5,
+    "jockey": 6,
+    "spitter": 7,
+    "common": 8,
+    "gibs": 9,
+    "consumable": 10
+  },
+
+  "gib_dirs": ["gibs", "limbs"],
+
+  "material_exclude_prefixes": [
+    "debug/",
+    "models/debug/",
+    "effects/",
+    "engine/",
+    "tools/"
+  ],
+
+  "model_class_prefixes": [
+    ["anim_common_male_exp", "common"],
+    ["anim_common_vomit", "common"],
+    ["common_fem_infected", "common"],
+    ["common_male_infected", "common"],
+    ["common_shadertest", "common"],
+    ["anim_common", "common"],
+    ["anim_hulk", "tank"],
+    ["anim_boomer", "boomer"],
+    ["anim_charger", "charger"],
+    ["anim_hunter", "hunter"],
+    ["anim_jockey", "jockey"],
+    ["anim_smoker", "smoker"],
+    ["anim_spitter", "spitter"],
+    ["anim_witch", "witch"],
+    ["boomette", "boomer"],
+    ["boomer", "boomer"],
+    ["charger", "charger"],
+    ["hulk", "tank"],
+    ["hunter", "hunter"],
+    ["jockey", "jockey"],
+    ["smoker", "smoker"],
+    ["spitter", "spitter"],
+    ["witch", "witch"],
+    ["common", "common"],
+    ["cim_", "common"],
+    ["w_eq_", "consumable"]
+  ],
+
+  "consumable_model_stems": [
+    "w_eq_adrenaline",
+    "w_eq_bile_flask",
+    "w_eq_defibrillator",
+    "w_eq_defibrillator_no_paddles",
+    "w_eq_defibrillator_paddles",
+    "w_eq_explosive_ammopack",
+    "w_eq_incendiary_ammopack",
+    "w_eq_medkit",
+    "w_eq_molotov",
+    "w_eq_painpills",
+    "w_eq_pipebomb"
+  ],
+
+  "consumable_material_prefixes": [
+    "models/w_models/eq_adrenaline/",
+    "models/w_models/eq_ammopack/",
+    "models/w_models/eq_defibrillator/",
+    "models/w_models/eq_medkit/",
+    "models/w_models/eq_molotov/",
+    "models/w_models/eq_painpills/",
+    "models/w_models/eq_pipebomb/",
+    "models/v_models/weapons/eq_adrenaline/",
+    "models/v_models/weapons/eq_ammopack/",
+    "models/v_models/weapons/eq_bile_flask/",
+    "models/v_models/weapons/eq_defibrillator/",
+    "models/v_models/weapons/eq_medkit/",
+    "models/v_models/weapons/eq_molotov/",
+    "models/v_models/weapons/eq_painpills/",
+    "models/v_models/weapons/eq_pipebomb/",
+    "models/props/terror/explosive_ammopack",
+    "models/props/terror/incendiary_ammopack",
+    "models/props/terror/exploding_ammo",
+    "models/props/terror/incendiary_ammo"
+  ],
+
+  "render_flags": {
+    "$model": "1",
+    "$ignorez": "1",
+    "$nocull": "1",
+    "$nofog": "1",
+    "$nodecal": "1",
+    "$halflambert": "0",
+    "$phong": "0",
+    "$ambientocclusion": "0",
+    "$shinyblood": "0",
+    "$burning": "0",
+    "$wounded": "0",
+    "$eyeglow": "0",
+    "$disablevariation": "1",
+    "$allowdiffusemodulation": "0",
+    "$blendtintbybasealpha": "0",
+    "$basecolortint": "[1 1 1]",
+    "$selfillum": "1",
+    "$selfillumfresnel": "0",
+    "$selfillumtint": "[1 1 1]"
+  },
+
+  "tracer_materials": [
+    "particle/particle_glow_05_additive",
+    "sprites/laserbeam"
+  ],
+
+  "alpha_preserve": [
+    "models/infected/boomer/boomer_hair",
+    "models/infected/smoker/boomer_hair",
+    "models/infected/witch/witch_hair"
+  ],
+
+  "additive_preserve": [
+    "models/infected/common/l4d2/cim_ceda_faceplate"
+  ],
+
+  "spitter_puddle_materials": [
+    "particle/pool_01_oriented",
+    "particle/warp_pool_01",
+    "particle/water_splash/water_splash_add_nodepth",
+    "particle/water_splash/water_splash_addself_nodepth",
+    "particle/droplets/droplets_oriented_add_nodepth"
+  ],
+
+  "smoker_tongue_materials": [
+    "particle/smoker_tongue_beam",
+    "particle/smoker_tongue_joint"
+  ],
+
+  "capture_commands": {
+    "sv_cheats": "1",
+    "mat_hdr_level": "0",
+    "mat_bloomscale": "0",
+    "mat_disable_bloom": "1",
+    "mat_colorcorrection": "0",
+    "mat_motion_blur_enabled": "0",
+    "mat_grain_scale_override": "0",
+    "mat_antialias": "0",
+    "mat_software_aa_strength": "0",
+    "mat_specular": "0",
+    "r_dynamic": "0",
+    "muzzleflash_light": "0",
+    "fog_override": "1",
+    "fog_enable": "0",
+    "r_drawviewmodel": "0",
+    "cl_drawhud": "0",
+    "net_graph": "0",
+    "sv_consistency": "0",
+    "sv_pure": "0"
+  },
+
+  "client_commands": {
+    "r_drawtracers": "1",
+    "r_drawtracers_firstperson": "1",
+    "z_do_tracers": "1",
+    "z_tracer_spacing": "1",
+    "mat_hdr_level": "0",
+    "mat_bloomscale": "0",
+    "mat_disable_bloom": "1",
+    "mat_colorcorrection": "0",
+    "mat_motion_blur_enabled": "0",
+    "mat_grain_scale_override": "0",
+    "mat_antialias": "0",
+    "mat_software_aa_strength": "0",
+    "mat_specular": "0",
+    "r_dynamic": "0",
+    "muzzleflash_light": "0",
+    "r_drawviewmodel": "0",
+    "cl_drawhud": "0",
+    "net_graph": "0"
+  },
+
+  "cleanup_commands": {
+    "cl_ragdoll_limit": "0",
+    "ragdoll_sleepaftertime": "0.25",
+    "r_decals": "1",
+    "r_drawmodeldecals": "0",
+    "func_break_max_pieces": "0",
+    "violence_hblood": "0",
+    "violence_hgibs": "0"
+  },
+
+  "custom_sound_generator": {
+    "bell": {
+        "src": "data/sounds/perfect-fart.mp3",
+        "dest": [
+            "left4dead2/sound/level/bell_impact.wav",
+            "left4dead2/sound/level/bell_normal.wav",
+            "left4dead2/sound/level/timer_bell.wav"
+        ]
+    },
+    "round_complete": {
+        "src": "data/sounds/yeah-boiii-i-i-i.mp3",
+        "dest": [
+            "left4dead2/sound/music/safe/themonsterswithout.wav",
+            "left4dead2/sound/music/safe/themonsterswithout_s.wav"
+        ]
+    },
+    "heal": {
+        "src": "data/sounds/kids-saying-yay-sound-effect_3.mp3",
+        "dest": [
+            "left4dead2/sound/player/survivor/heal/bandaging_1.wav"
+        ]
+    },
+    "tank": {
+        "src": "data/sounds/daddys-home.mp3",
+        "dest": [
+            "left4dead2/sound/player/tank/voice/yell/tank_yell_01.wav",
+            "left4dead2/sound/player/tank/voice/yell/tank_yell_02.wav",
+            "left4dead2/sound/player/tank/voice/yell/tank_yell_03.wav",
+            "left4dead2/sound/player/tank/voice/yell/tank_yell_04.wav",
+            "left4dead2/sound/player/tank/voice/yell/tank_yell_05.wav",
+            "left4dead2/sound/player/tank/voice/yell/tank_yell_06.wav",
+            "left4dead2/sound/player/tank/voice/yell/tank_yell_07.wav",
+            "left4dead2/sound/player/tank/voice/yell/tank_yell_08.wav",
+            "left4dead2/sound/player/tank/voice/yell/tank_yell_09.wav",
+            "left4dead2/sound/player/tank/voice/yell/tank_yell_10.wav",
+            "left4dead2/sound/player/tank/voice/yell/tank_yell_11.wav",
+            "left4dead2/sound/player/tank/voice/yell/tank_yell_12.wav",
+            "left4dead2/sound/player/tank/voice/yell/tank_yell_13.wav",
+            "left4dead2/sound/player/tank/voice/yell/tank_yell_14.wav",
+            "left4dead2/sound/player/tank/voice/yell/tank_yell_15.wav",
+            "left4dead2/sound/player/tank/voice/yell/tank_yell_16.wav"
+        ]
+    }
+  }
+}

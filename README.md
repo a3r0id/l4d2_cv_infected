@@ -13,13 +13,14 @@ My initial goal was to make the infected easier to see for a computer vision pro
 | Consumable pickups X-ray (medkits, pills, throwables, ammo packs) | `--feat-override-consumables` | ✗ | ✓ | ✓ |
 | Recolored client bullet tracers + capture HUD/view settings | `--feat-trace` | ✗ | ✓ | ✓ |
 | Scripted 3D shot beams (`mapspawn_addon.nut`) | `--feat-trace` | ✗ | ✗ | ✓ |
-| Clear ragdolls/decals when shooting | `--feat-cleanup` | ✓ | ✓ | ✓ |
+| Cap ragdolls/decals; C clears clutter | `--feat-cleanup` | ✓ | ✓ | ✓ |
+| Custom sound replacements from `config.json` | `--feat-sounds` | ✓ | ✓ | ✓ |
 
 **Regular server** = official or stock public server that blocks client addons. 
 **Addon server** = allows custom client VPKs (many custom/community servers). 
 **`sv_cheats 1`** = listen/local host where cheat convars and addon VScript can run.
 
-*This does not break Valve TOS and uses the official SDK. Model/material overrides need a server that allows addons. Scripted shot beams need a host with `sv_cheats 1`. Cleanup is client cfg only, so it still runs on regular servers. Cheaters suck — please don't use this to achieve some imaginary competitive edge; This is just for fun, mess around with it in expert mode!*
+*This does not break Valve TOS and uses the official SDK. Model/material overrides need a server that allows addons. Scripted shot beams need a host with `sv_cheats 1`. Cleanup and custom sounds are loose client files, so they still run on regular servers. Cheaters suck — please don't use this to achieve some imaginary competitive edge; This is just for fun, mess around with it in expert mode!*
 
 [Clip: CV Override Initial Test](https://medal.tv/games/left-4-dead-2/clips/nFNBhWZWYpHmz7Ptk?invite=cr-MSx0N2MsMTczMjc5NzQ3)
 
@@ -48,9 +49,9 @@ Special infected are one color per class. Every common infected, including the L
 | tracer  | 255, 0, 128   | Each shot, for half a second. Not an infected class |
 
 
-The color is baked into the texture. L4D2's infected shader still recolors each common unless the material turns that off, which is why some stayed red, blue, or black. These materials set `$disablevariation 1` and `$allowdiffusemodulation 0` on `VertexLitGeneric`, and `$selfillum 1` so shadows do not dim them.
+The color is baked into the texture. These materials set `$disablevariation 1` and `$allowdiffusemodulation 0` on `VertexLitGeneric`, and `$selfillum 1` so shadows do not dim them.
 
-Colors live in `cvmod/config.py` (`CLASS_COLORS` and `TRACER_COLOR`). After editing them, run `make colors`.
+Colors and other tunables live in `config.json` (`class_colors`, `tracer_color`, commands, material lists). After editing them, run `make colors`.
 
 ## What gets replaced
 
@@ -76,7 +77,8 @@ Optional features:
 make CONSUMABLES=1
 make TRACE=1
 make CLEANUP=1
-make CONSUMABLES=1 TRACE=1 CLEANUP=1
+make SOUNDS=1
+make CONSUMABLES=1 TRACE=1 CLEANUP=1 SOUNDS=1
 ```
 
 Or with `main.py`:
@@ -85,10 +87,11 @@ Or with `main.py`:
 python main.py all --feat-override-consumables
 python main.py all --feat-trace
 python main.py all --feat-cleanup
-python main.py all --feat-override-consumables --feat-trace --feat-cleanup
+python main.py all --feat-sounds
+python main.py all --feat-override-consumables --feat-trace --feat-cleanup --feat-sounds
 ```
 
-That finds the Steam install of Left 4 Dead 2, packs `dist/cv_infected.vpk`, and copies it to that install's `left4dead2/addons/` folder. Each deploy overwrites the previous addon and removes loose client cfg hooks that the selected features do not need. Enable **CV Infected Override** under Extras, then Add-ons.
+That finds the Steam install of Left 4 Dead 2, packs `dist/cv_infected.vpk`, and copies it to that install's `left4dead2/addons/` folder. Each deploy overwrites the previous addon and removes loose client cfg hooks / custom sounds that the selected features do not need. Enable **CV Infected Override** under Extras, then Add-ons.
 
 Close the game before deploying. A running game locks the VPK, and it keeps whatever addon it loaded at startup. Quit fully, then launch again.
 
@@ -110,7 +113,7 @@ Run these from this directory. `make help` prints the same list.
 | Command                   | What it does                                                                |
 | ------------------------- | --------------------------------------------------------------------------- |
 | `make`                    | Full rebuild: index, materials, models, pack, and deploy (infected only)    |
-| `make colors`             | Rebuild colours, pack, and deploy. Use this after editing `cvmod/config.py` |
+| `make colors`             | Rebuild colours, pack, and deploy. Use this after editing `config.json`     |
 | `make materials`          | Flat colours for the selected features                                      |
 | `make models ONLY=hunter` | One proxy mesh                                                              |
 | `make pack`               | Write `dist/cv_infected.vpk`                                                |
@@ -121,7 +124,7 @@ Run these from this directory. `make help` prints the same list.
 | `make help`               | Print the targets                                                           |
 
 
-`FORCE=1` rebuilds even when inputs have not changed. `KEEP=1` leaves the generated compile files on disk. `CONSUMABLES=1`, `TRACE=1`, and `CLEANUP=1` enable the optional features. Example: `make models ONLY=hunter FORCE=1`.
+`FORCE=1` rebuilds even when inputs have not changed. `KEEP=1` leaves the generated compile files on disk. `CONSUMABLES=1`, `TRACE=1`, `CLEANUP=1`, and `SOUNDS=1` enable the optional features. Example: `make models ONLY=hunter FORCE=1`.
 
 Unchanged files are skipped. Another addon that ships its own `models/infected/*.mdl` will fight this one. Only one of them wins.
 
@@ -129,11 +132,13 @@ Unchanged files are skipped. Another addon that ships its own `models/infected/*
 
 This is a client addon. It works on public servers that allow addons. Nothing here has to be hosted by you.
 
-Quit the game fully after installing. A running game keeps the addon it loaded at startup. In Extras, then Add-ons, **CV Infected Override** should say version **1.7**.
+Quit the game fully after installing. A running game keeps the addon it loaded at startup. In Extras, then Add-ons, **CV Infected Override** should say version **1.8**.
 
 With `TRACE=1` / `--feat-trace`, deploy also writes `left4dead2/cfg/cv_client.cfg` and runs it from `autoexec.cfg` and from the end of `valve.rc`. Without that flag, deploy removes those hooks. A config inside the addon cannot be exec'd. The console prints `[cv_infected] client settings applied` when the client cfg runs.
 
-With `CLEANUP=1` / `--feat-cleanup`, deploy writes `left4dead2/cfg/cv_cleanup.cfg` and execs it from `autoexec.cfg` and `valve.rc`. Fire (MOUSE1) clears decals and ragdolls on press and release, caps new ragdolls/decals, and MOUSE3 clears mid-spray. Without the flag, deploy removes that cfg and restores `MOUSE1` to `+attack`.
+With `CLEANUP=1` / `--feat-cleanup`, deploy writes `left4dead2/cfg/cv_cleanup.cfg` and execs it from `autoexec.cfg` and `valve.rc`. It keeps `MOUSE1` on `+attack` (required for the "Press [key] to play as ..." glyph), leaves scope on `MOUSE3`, caps ragdolls/decals, and binds `C` to clear clutter on demand. Without the flag, deploy removes that cfg and restores stock `MOUSE1`/`MOUSE3`/`C` binds.
+
+With `SOUNDS=1` / `--feat-sounds`, deploy converts each entry under `custom_sound_generator` in `config.json` (MP3 via ffmpeg) to 16-bit 44.1 kHz WAV and writes the listed destinations under the game install. Without the flag, those loose overrides are deleted so the stock VPK sounds return. Needs `ffmpeg` on PATH.
 
 Shots use the tracers the game already draws, recolored to **255, 0, 128**, from the muzzle to the impact. First-person tracers are off until `cv_client.cfg` runs.
 

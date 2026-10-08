@@ -3,7 +3,8 @@
 Core (default) ships only the infected material and proxy overrides.
 `--feat-override-consumables` adds medkits and other pickups.
 `--feat-trace` adds cheat-only shot scripts, capture cfg, and client tracer hooks.
-`--feat-cleanup` adds an autoexec patch that clears ragdolls/decals when shooting.
+`--feat-cleanup` adds an autoexec patch that caps ragdolls/decals and binds C to clear clutter.
+`--feat-sounds` converts and installs custom sounds from config.json.
 """
 
 from __future__ import annotations
@@ -19,6 +20,7 @@ class Features:
     consumables: bool = False
     trace: bool = False
     cleanup: bool = False
+    sounds: bool = False
 
     def label(self) -> str:
         parts = ["infected"]
@@ -28,6 +30,8 @@ class Features:
             parts.append("trace")
         if self.cleanup:
             parts.append("cleanup")
+        if self.sounds:
+            parts.append("sounds")
         return "+".join(parts)
 
 
@@ -49,6 +53,7 @@ def from_args(args) -> Features:
         consumables=bool(getattr(args, "feat_override_consumables", False)),
         trace=bool(getattr(args, "feat_trace", False)),
         cleanup=bool(getattr(args, "feat_cleanup", False)),
+        sounds=bool(getattr(args, "feat_sounds", False)),
     )
 
 

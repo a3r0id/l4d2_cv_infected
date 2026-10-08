@@ -1,7 +1,7 @@
 # Simpler entry points for main.py.
 #
 #   make                         index, materials, models, pack, deploy (infected only)
-#   make CONSUMABLES=1 TRACE=1 CLEANUP=1   same, with optional features
+#   make CONSUMABLES=1 TRACE=1 CLEANUP=1 SOUNDS=1   same, with optional features
 #   make colors                  materials, pack, deploy
 #   make models ONLY=hunter      one proxy mesh
 #   make verify                  check the build tree
@@ -13,6 +13,7 @@
 # CONSUMABLES=1   --feat-override-consumables
 # TRACE=1         --feat-trace
 # CLEANUP=1       --feat-cleanup
+# SOUNDS=1        --feat-sounds
 
 PY ?= python
 
@@ -41,8 +42,14 @@ endif
 ifneq ($(CLEANUP),)
 FEAT_FLAGS += --feat-cleanup
 endif
+ifneq ($(SOUNDS),)
+FEAT_FLAGS += --feat-sounds
+endif
 
 .PHONY: help all index materials models pack deploy loose verify hlmv colors
+
+# Without this, a bare `make CONSUMABLES=1 ...` builds the first target (help).
+.DEFAULT_GOAL := all
 
 help:
 	@echo make            full rebuild: index, materials, models, pack, deploy
@@ -61,7 +68,8 @@ help:
 	@echo KEEP=1           keep generated QC/SMD and studiomdl logs
 	@echo CONSUMABLES=1    pack medkits and other pickups
 	@echo TRACE=1          pack cheat-only tracers, scripts, and client cfg
-	@echo CLEANUP=1        clear ragdolls/decals when shooting
+	@echo CLEANUP=1        cap ragdolls/decals; C clears clutter
+	@echo SOUNDS=1         install custom sounds from config.json
 
 all:
 	$(PY) main.py all $(ONLY_FLAG) $(FORCE_FLAG) $(KEEP_FLAG) $(FEAT_FLAGS)
