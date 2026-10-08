@@ -13,7 +13,7 @@ My initial goal was to make the infected easier to see for a computer vision pro
 | Consumable pickups X-ray (medkits, pills, throwables, ammo packs) | `--feat-override-consumables` | ✗ | ✓ | ✓ |
 | Recolored client bullet tracers + capture HUD/view settings | `--feat-trace` | ✗ | ✓ | ✓ |
 | Scripted 3D shot beams (`mapspawn_addon.nut`) | `--feat-trace` | ✗ | ✗ | ✓ |
-| Clear ragdolls/decals when shooting | `--feat-cleanup` | ✓ | ✓ | ✓ |
+| Clear ragdolls/decals with a hotkey | `--feat-cleanup` | ✓ | ✓ | ✓ |
 
 **Regular server** = official or stock public server that blocks client addons. 
 **Addon server** = allows custom client VPKs (many custom/community servers). 
