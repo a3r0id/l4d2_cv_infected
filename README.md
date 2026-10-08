@@ -43,7 +43,7 @@ Special infected are one color per class. Every common infected, including the L
 | jockey  | 255, 255, 0   | Jockey                                              |
 | spitter | 0, 255, 128   | Spitter                                             |
 | witch   | 255, 255, 255 | Witch and witch bride                               |
-| gibs    | 128, 0, 255   | Severed limbs and gibs (gore chunks)                |
+| gibs    | 0, 0, 0       | Severed limbs and gibs (gore chunks)                |
 | consumable | 255, 255, 255 | Medkits, pills, adrenaline, defibs, molotovs, pipe bombs, bile, ammo packs |
 | tracer  | 255, 0, 128   | Each shot, for half a second. Not an infected class |
 
