@@ -64,6 +64,8 @@ L4D1 campaigns and The Sacrifice do not use the base special models. Those maps 
 
 ## Installation
 
+*If you only need the core overrides then simply move [the VPK addon](https://github.com/a3r0id/l4d2_cv_infected/blob/main/dist/cv_infected.vpk) to path/to/your/L4D2/addons/cv_infected.vpk.*
+
 Build and install the core infected overrides with:
 
 ```
