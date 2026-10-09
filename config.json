@@ -17,9 +17,15 @@
     "spitter": [0, 255, 128],
     "tank": [0, 0, 255],
     "witch": [255, 255, 255],
-    "gibs": [0, 0, 0],
-    "consumable": [255, 255, 255]
+    "gibs": [0, 0, 0]
   },
+
+  "consumable_brightness": 1.4,
+  "explosive_ammo_color": [255, 200, 0],
+  "explosive_ammo_material_prefixes": [
+    "models/props/terror/explosive_ammopack",
+    "models/props/terror/exploding_ammo"
+  ],
 
   "class_precedence": {
     "witch": 0,

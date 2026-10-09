@@ -298,11 +298,12 @@ def build(
     logs_root = config.WORK / "logs"
     logs_root.mkdir(parents=True, exist_ok=True)
 
+    # Consumables keep their stock meshes; only their materials are overridden.
     targets = [
         entry
         for entry in sorted(idx.models.values(), key=lambda e: e.stem)
         if (not only or only.lower() in entry.stem.lower())
-        and (entry.cls != "consumable" or features.consumables)
+        and entry.cls != "consumable"
     ]
 
     for entry in targets:

@@ -33,7 +33,7 @@ def addoninfo_text(features: Features) -> str:
         "Replaces infected materials with flat, depth-ignoring colours for computer vision."
     )
     if features.consumables:
-        desc += " Medkits and other pickups are bright white."
+        desc += " Pickups are x-rayed; explosive ammo packs are bright gold."
     if features.trace:
         desc += " Includes cheat-only shot tracers and capture settings."
     if features.cleanup:

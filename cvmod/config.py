@@ -113,6 +113,14 @@ CLASS_COLORS: dict[str, tuple[int, int, int]] = {
 CLASS_PRECEDENCE: dict[str, int] = {
     name: int(rank) for name, rank in _USER["class_precedence"].items()
 }
+# Multiplier for $color2 / $selfillumtint on stock consumable textures.
+CONSUMABLE_BRIGHTNESS: float = float(_USER.get("consumable_brightness", 1.4))
+EXPLOSIVE_AMMO_COLOR: tuple[int, int, int] = _rgb(
+    _USER.get("explosive_ammo_color", [255, 200, 0])
+)
+EXPLOSIVE_AMMO_MATERIAL_PREFIXES: tuple[str, ...] = tuple(
+    str(p) for p in _USER.get("explosive_ammo_material_prefixes", [])
+)
 
 GIB_DIRS = {str(d) for d in _USER["gib_dirs"]}
 MATERIAL_EXCLUDE_PREFIXES: tuple[str, ...] = tuple(
@@ -179,6 +187,12 @@ def classify_model(stem: str, rel_dirs: tuple[str, ...] = ()) -> str:
 def is_consumable_material(key: str) -> bool:
     k = key.replace("\\", "/").lower()
     return any(k == p or k.startswith(p) for p in CONSUMABLE_MATERIAL_PREFIXES)
+
+
+def is_explosive_ammo_material(key: str) -> bool:
+    """World explosive ammo packs — flat bright gold when consumables are on."""
+    k = key.replace("\\", "/").lower()
+    return any(k == p or k.startswith(p) for p in EXPLOSIVE_AMMO_MATERIAL_PREFIXES)
 
 
 def is_excluded_material(key: str) -> bool:

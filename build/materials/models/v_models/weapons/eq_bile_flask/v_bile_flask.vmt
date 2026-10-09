@@ -1,6 +1,6 @@
 VertexLitGeneric
 {
-	$basetexture            "models/cvmod/flat_consumable"
+	$basetexture            "models/v_models/Weapons/eq_bile_flask/v_bile_flask"
 	$model                  "1"
 	$ignorez                "1"
 	$nocull                 "1"
@@ -19,7 +19,8 @@ VertexLitGeneric
 	$basecolortint          "[1 1 1]"
 	$selfillum              "1"
 	$selfillumfresnel       "0"
-	$selfillumtint          "[1 1 1]"
+	$selfillumtint          "[1.4 1.4 1.4]"
 	$selfillummask          "models/cvmod/flat_lightwarp"
+	$color2                 "[1.4 1.4 1.4]"
 	$translucent            "1"
 }

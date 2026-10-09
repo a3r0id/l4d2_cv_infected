@@ -14,7 +14,7 @@ import json
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
-from . import config, mdl, vmt, vpkutil
+from . import config, deadbodies, mdl, vmt, vpkutil
 
 # Fallback only, for VMTs no model referenced.
 DIR_CLASS = {
@@ -228,6 +228,15 @@ def build() -> Index:
         if key in index.materials or not config.is_consumable_material(key):
             continue
         _claim(index, key, "consumable", "directory", None)
+
+    # Drop materials that decorative corpse props share with live commons.
+    # Those stay stock so map body piles do not turn into class colours; live
+    # commons still read as flat colours via their proxy meshes.
+    shared = deadbodies.shared_infected_materials()
+    if shared:
+        index.materials = {
+            key: entry for key, entry in index.materials.items() if key not in shared
+        }
 
     for entry in index.materials.values():
         _describe(entry)

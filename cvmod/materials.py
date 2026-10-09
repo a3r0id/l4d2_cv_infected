@@ -5,6 +5,9 @@ value that lands in the framebuffer is the authored RGB and mask extraction is
 an exact-match test. Materials whose base texture carries real transparency
 (hair cards) get a generated texture that keeps the original alpha and replaces
 only the colour, so cutouts do not become solid quads.
+
+Consumables (optional) keep their stock `$basetexture`, add `$ignorez`, and
+brighten via `$color2` / `$selfillumtint`.
 """
 
 from __future__ import annotations
@@ -12,11 +15,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import config, index as index_mod, manifest, vmt, vtf
+from . import config, deadbodies, index as index_mod, manifest, vmt, vtf
 from .features import Features
 
 # Bump when the emitted VMT/VTF layout changes, to force a rebuild.
-GENERATOR_VERSION = "3"
+GENERATOR_VERSION = "5"
 
 TRANSPARENT_THRESHOLD = 0.001  # fraction of texels below alpha 128
 
@@ -95,6 +98,53 @@ def _vmt_params(entry: index_mod.MaterialEntry, texture_ref: str, masked: bool) 
     return params
 
 
+def _normalize_texture_ref(ref: str) -> str:
+    """Stock VMTs sometimes put a .vtf suffix on $basetexture; strip it."""
+    text = (ref or "").replace("\\", "/").strip().strip('"')
+    if text.lower().endswith(".vtf"):
+        text = text[:-4]
+    return text
+
+
+def _consumable_vmt_params(entry: index_mod.MaterialEntry) -> dict[str, str]:
+    """Keep the stock albedo; draw through walls and brighten a little."""
+    basetexture = _normalize_texture_ref(entry.basetexture)
+    if not basetexture:
+        raise ValueError("consumable material has no $basetexture")
+    bright = config.CONSUMABLE_BRIGHTNESS
+    tint = f"[{bright:g} {bright:g} {bright:g}]"
+    params: dict[str, str] = {"$basetexture": basetexture}
+    params.update(config.RENDER_FLAGS)
+    params["$color2"] = tint
+    params["$selfillumtint"] = tint
+    if entry.alphatest:
+        params["$alphatest"] = "1"
+        params["$allowalphatocoverage"] = "0"
+    if entry.additive:
+        params["$additive"] = "1"
+    if entry.translucent:
+        params["$translucent"] = "1"
+    return params
+
+
+def explosive_ammo_texture_ref() -> str:
+    return f"{config.FLAT_MATERIAL_DIR}/flat_explosive_ammo"
+
+
+def _explosive_ammo_vmt_params() -> dict[str, str]:
+    """Solid bright gold through walls — easy to spot in a pile of loot."""
+    params: dict[str, str] = {"$basetexture": explosive_ammo_texture_ref()}
+    params.update(config.RENDER_FLAGS)
+    # Extra punch on top of the baked gold albedo.
+    params["$selfillumtint"] = "[1.5 1.2 0.2]"
+    params["$color2"] = "[1.2 1.0 0.35]"
+    return params
+
+
+def _is_consumable_entry(entry: index_mod.MaterialEntry, key_name: str) -> bool:
+    return entry.cls == "consumable" or config.is_consumable_material(key_name)
+
+
 def build(
     idx: index_mod.Index,
     mani: manifest.Manifest,
@@ -109,11 +159,11 @@ def build(
     used_classes = sorted(
         cls
         for cls in ({e.cls for e in idx.materials.values()} | set(config.CLASS_COLORS))
-        if cls != "consumable" or features.consumables
+        if cls != "consumable"
     )
 
     # Shared flat texture plus the material the phase 2 proxy meshes point at,
-    # one pair per class.
+    # one pair per infected class. Most consumables keep stock textures.
     for cls in used_classes:
         color = config.CLASS_COLORS.get(cls, (255, 255, 255))
         texture = out_materials / f"{flat_texture_ref(cls)}.vtf"
@@ -134,16 +184,74 @@ def build(
         mani.record(unit, key, [texture, proxy_vmt])
         result.stats.written += 1
 
+    if features.consumables:
+        gold = config.EXPLOSIVE_AMMO_COLOR
+        gold_path = out_materials / f"{explosive_ammo_texture_ref()}.vtf"
+        gold_unit = "materials/_flat/explosive_ammo"
+        gold_data = vtf.build(gold)
+        gold_key = manifest.sha(GENERATOR_VERSION, "explosive-ammo-gold", repr(gold), gold_data)
+        if not force and mani.is_current(gold_unit, gold_key) and gold_path.exists():
+            mani.touch(gold_unit)
+            result.stats.skipped += 1
+        else:
+            manifest.write_if_changed(gold_path, gold_data)
+            mani.record(gold_unit, gold_key, [gold_path])
+            result.stats.written += 1
+
     for key_name, entry in sorted(idx.materials.items()):
         if only and only.lower() not in key_name.lower():
             continue
-        if entry.cls == "consumable" and not features.consumables:
+        if _is_consumable_entry(entry, key_name) and not features.consumables:
             continue
-        if config.is_consumable_material(key_name) and not features.consumables:
+        # Corpse props reuse these paths; leave stock so piles stay uncoloured.
+        if deadbodies.is_shared_infected_material(key_name):
             continue
         unit = f"materials/{key_name}"
-        color = config.CLASS_COLORS.get(entry.cls, (255, 255, 255))
         outputs: list[Path] = []
+
+        if _is_consumable_entry(entry, key_name):
+            if config.is_explosive_ammo_material(key_name):
+                params = _explosive_ammo_vmt_params()
+                vmt_text = _render_vmt(params)
+                unit_key = manifest.sha(
+                    GENERATOR_VERSION,
+                    "consumable-explosive-gold",
+                    vmt_text,
+                    repr(config.EXPLOSIVE_AMMO_COLOR),
+                )
+                vmt_path = out_materials / f"{key_name}.vmt"
+                if not force and mani.is_current(unit, unit_key):
+                    mani.touch(unit)
+                    result.stats.skipped += 1
+                    continue
+                manifest.write_if_changed(vmt_path, vmt_text.encode("utf-8"))
+                mani.record(unit, unit_key, [vmt_path])
+                result.stats.written += 1
+                continue
+            try:
+                params = _consumable_vmt_params(entry)
+            except ValueError as exc:
+                result.errors.append((key_name, str(exc)))
+                result.stats.failed += 1
+                continue
+            vmt_text = _render_vmt(params)
+            unit_key = manifest.sha(
+                GENERATOR_VERSION,
+                "consumable-stock",
+                vmt_text,
+                repr(config.CONSUMABLE_BRIGHTNESS),
+            )
+            vmt_path = out_materials / f"{key_name}.vmt"
+            if not force and mani.is_current(unit, unit_key):
+                mani.touch(unit)
+                result.stats.skipped += 1
+                continue
+            manifest.write_if_changed(vmt_path, vmt_text.encode("utf-8"))
+            mani.record(unit, unit_key, [vmt_path])
+            result.stats.written += 1
+            continue
+
+        color = config.CLASS_COLORS.get(entry.cls, (255, 255, 255))
 
         try:
             alpha = _alpha_mask(entry)

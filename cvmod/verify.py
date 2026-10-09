@@ -7,7 +7,7 @@ import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import config, index as index_mod, vmt
+from . import config, deadbodies, index as index_mod, vmt
 from .features import Features
 
 
@@ -73,16 +73,26 @@ def run(
     )
 
     # 2. Every source infected VMT is covered, including ones no model referenced.
+    # Materials shared with models/deadbodies props are intentionally left stock.
+    shared = deadbodies.shared_infected_materials()
     source_root = config.SRC_MATERIALS / "models" / "infected"
     source_keys = {
         p.relative_to(config.SRC_MATERIALS).with_suffix("").as_posix().lower()
         for p in source_root.rglob("*.vmt")
     }
-    uncovered = sorted(source_keys - set(built))
+    required_source = source_keys - shared
+    uncovered = sorted(required_source - set(built))
     report.add(
-        f"all {len(source_keys)} shipped infected VMTs covered",
+        f"all {len(required_source)} shipped infected VMTs covered "
+        f"({len(shared)} deadbody-shared left stock)",
         not uncovered,
         "" if not uncovered else f"uncovered {len(uncovered)}: " + ", ".join(uncovered[:10]),
+    )
+    leaked = sorted(k for k in built if k in shared)
+    report.add(
+        "deadbody-shared materials not overridden",
+        not leaked,
+        "" if not leaked else f"still flat: {', '.join(leaked[:10])}",
     )
 
     # 3. Nothing outside the infected, consumable, and generated-texture trees.
@@ -154,8 +164,33 @@ def run(
             if ref.lower() != tracer_texture:
                 tracer_bad.append(f"{key} -> {ref or '<none>'}")
             continue
-        if config.is_consumable_material(key) and not features.consumables:
-            dangling.append(f"{key} present without --feat-override-consumables")
+        if config.is_consumable_material(key):
+            if not features.consumables:
+                dangling.append(f"{key} present without --feat-override-consumables")
+                continue
+            ignorez = params.get("$ignorez", "").strip().strip('"')
+            if ignorez in ("", "0"):
+                dangling.append(f"{key} missing $ignorez")
+            ref = params.get("$basetexture", "").strip().strip('"').replace("\\", "/")
+            if ref.lower().endswith(".vtf"):
+                ref = ref[:-4]
+            gold = f"{config.FLAT_MATERIAL_DIR}/flat_explosive_ammo"
+            if config.is_explosive_ammo_material(key):
+                if ref.lower() != gold:
+                    dangling.append(f"{key} -> {ref or '<none>'} (want gold {gold})")
+                elif not (materials_root / f"{ref}.vtf").exists():
+                    dangling.append(f"{key} gold texture missing")
+            elif not ref:
+                dangling.append(f"{key} -> <none>")
+            elif ref.lower() == f"{config.FLAT_MATERIAL_DIR}/flat_consumable":
+                dangling.append(f"{key} still uses flat_consumable")
+            elif not (config.SRC_MATERIALS / f"{ref}.vtf").exists():
+                dangling.append(f"{key} -> {ref} (stock texture missing)")
+            mask = params.get("$selfillummask", "").strip().strip('"').replace("\\", "/")
+            if params.get("$selfillum", "").strip().strip('"') != "1" or not mask:
+                dangling.append(f"{key} missing $selfillum")
+            elif not (materials_root / f"{mask}.vtf").exists():
+                dangling.append(f"{key} selfillum mask -> {mask}")
             continue
         shaders.add(shader)
         ref = params.get("$basetexture", "")
@@ -172,7 +207,7 @@ def run(
             dangling.append(f"{key} missing $allowdiffusemodulation 0")
     report.add("every generated VMT parses", not bad_syntax, "\n".join(bad_syntax[:10]))
     report.add(
-        "every $basetexture resolves inside the addon",
+        "every $basetexture resolves (addon or stock for consumables)",
         not dangling,
         "\n".join(dangling[:10]),
     )

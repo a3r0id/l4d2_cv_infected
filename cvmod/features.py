@@ -1,7 +1,7 @@
 """Optional addon features selected at pack/deploy time.
 
 Core (default) ships only the infected material and proxy overrides.
-`--feat-override-consumables` adds medkits and other pickups.
+`--feat-override-consumables` x-rays stock pickup textures (slightly brightened).
 `--feat-trace` adds cheat-only shot scripts, capture cfg, and client tracer hooks.
 `--feat-cleanup` adds an autoexec patch that caps ragdolls/decals and binds C to clear clutter.
 `--feat-sounds` converts and installs custom sounds from config.json.
@@ -77,6 +77,8 @@ def is_consumable_build_path(rel: str) -> bool:
     if key is not None:
         if key == f"{config.FLAT_MATERIAL_DIR}/flat_consumable":
             return True
+        if key == f"{config.FLAT_MATERIAL_DIR}/flat_explosive_ammo":
+            return True
         if key == f"{config.FLAT_MATERIAL_DIR}/proxy_consumable":
             return True
         return config.is_consumable_material(key)
@@ -98,8 +100,21 @@ def is_trace_build_path(rel: str) -> bool:
     return stem in TRACE_FLAT_STEMS
 
 
+_MODEL_SUFFIXES = (".mdl", ".vvd", ".vtx", ".phy", ".ani")
+
+
+def is_packed_model(rel: str) -> bool:
+    """Studio files under models/. Servers consistency-check these and disconnect."""
+    rel = _norm(rel)
+    return rel.startswith("models/") and rel.endswith(_MODEL_SUFFIXES)
+
+
 def include_build_path(rel: str, features: Features) -> bool:
     """Whether a path under build/ belongs in the staged addon."""
+    # Replacing models/infected/*.mdl fails sv_consistency ("enforcing consistency
+    # for this file"). Flat materials recolor the stock mesh without that check.
+    if is_packed_model(rel):
+        return False
     if is_consumable_build_path(rel) and not features.consumables:
         return False
     if is_trace_build_path(rel) and not features.trace:

@@ -1,6 +1,6 @@
 VertexLitGeneric
 {
-	$basetexture            "models/cvmod/mask_models_v_models_weapons_eq_molotov_v_eq_molotov_bottle"
+	$basetexture            "models/v_models/Weapons/eq_molotov/v_eq_molotov_bottle"
 	$model                  "1"
 	$ignorez                "1"
 	$nocull                 "1"
@@ -19,8 +19,8 @@ VertexLitGeneric
 	$basecolortint          "[1 1 1]"
 	$selfillum              "1"
 	$selfillumfresnel       "0"
-	$selfillumtint          "[1 1 1]"
+	$selfillumtint          "[1.4 1.4 1.4]"
 	$selfillummask          "models/cvmod/flat_lightwarp"
-	$alphatest              "1"
-	$allowalphatocoverage   "0"
+	$color2                 "[1.4 1.4 1.4]"
+	$translucent            "1"
 }

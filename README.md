@@ -10,7 +10,7 @@ My initial goal was to make the infected easier to see for a computer vision pro
 | ------- | ---- | :------------: | :----------: | :-----------: |
 | Infected hitbox X-ray (color per class) | core | ✗ | ✓ | ✓ |
 | Spitter puddles and smoker tongue X-ray | core | ✗ | ✓ | ✓ |
-| Consumable pickups X-ray (medkits, pills, throwables, ammo packs) | `--feat-override-consumables` | ✗ | ✓ | ✓ |
+| Consumable pickups X-ray (stock textures, brightened) | `--feat-override-consumables` | ✗ | ✓ | ✓ |
 | Recolored client bullet tracers + capture HUD/view settings | `--feat-trace` | ✗ | ✓ | ✓ |
 | Scripted 3D shot beams (`mapspawn_addon.nut`) | `--feat-trace` | ✗ | ✗ | ✓ |
 | Cap ragdolls/decals; C clears clutter | `--feat-cleanup` | ✓ | ✓ | ✓ |
@@ -45,7 +45,8 @@ Special infected are one color per class. Every common infected, including the L
 | spitter | 0, 255, 128   | Spitter                                             |
 | witch   | 255, 255, 255 | Witch and witch bride                               |
 | gibs    | 0, 0, 0       | Severed limbs and gibs (gore chunks)                |
-| consumable | 255, 255, 255 | Medkits, pills, adrenaline, defibs, molotovs, pipe bombs, bile, ammo packs |
+| consumable | stock + brighten | Medkits, pills, adrenaline, defibs, molotovs, pipe bombs, bile, incendiary ammo |
+| explosive ammo | 255, 200, 0 | Explosive ammo packs — flat bright gold (tunable via `explosive_ammo_color`) |
 | tracer  | 255, 0, 128   | Each shot, for half a second. Not an infected class |
 
 
@@ -55,13 +56,13 @@ Colors and other tunables live in `config.json` (`class_colors`, `tracer_color`,
 
 ## What gets replaced
 
-1. **Materials.** Every infected VMT is replaced with a flat `VertexLitGeneric` material (`$ignorez`, `$nocull`, `$nofog`, variation disabled, self-illuminated). They draw through walls and ignore fog. Consumable materials are included only with `--feat-override-consumables`.
-2. **Meshes.** Each infected model is recompiled as boxes built from its own hitboxes, so the silhouette is the volume bullets actually test. Animations, grabs, and hitboxes are copied from the original model. World pickups get the same treatment when consumables are enabled.
+1. **Materials.** Every infected VMT is replaced with a flat `VertexLitGeneric` material (`$ignorez`, `$nocull`, `$nofog`, variation disabled, self-illuminated). They draw through walls and ignore fog. With `--feat-override-consumables`, most pickup materials keep their stock textures, get `$ignorez`, and are brightened via `consumable_brightness`; explosive ammo packs become flat bright gold (`explosive_ammo_color`).
+2. **Meshes.** The stock infected mesh is kept. Servers consistency-check `models/infected/*.mdl` and disconnect if the file differs (`hunter_l4d1.mdl` and the rest). The flat materials are what recolor that stock mesh. Proxy hitbox meshes are still built locally for checks, and they are not packed into the addon.
 3. **Shots.** With `--feat-trace`, each survivor bullet becomes a beam from the eyes to the server impact. A hit ends on the hitbox. A miss ends on the world. Grenades, molotovs, pipe bombs, and bile jars get the same beam while they fly. Beams last 0.5 seconds and use the tracer color.
 
 Models that only exist to play animations, and loose gibs that carry their own sequences, keep their original mesh and get the flat material instead.
 
-L4D1 campaigns and The Sacrifice do not use the base special models. Those maps spawn `hunter_l4d1`, `smoker_l4d1`, `boomer_l4d1`, and `hulk_l4d1`. A few Sacrifice maps spawn `hulk_dlc3` instead. The addon replaces those variants too. Common infected on those campaigns (`common_police_male01`, `common_male01`, `common_military_male01`, and the other L4D1 bodies) are included and colored pink.
+L4D1 campaigns and The Sacrifice spawn `hunter_l4d1`, `smoker_l4d1`, `boomer_l4d1`, and `hulk_l4d1` (some Sacrifice maps use `hulk_dlc3`). Their materials are recolored the same way. The model files themselves are not replaced, so a consistency check on those names does not fail.
 
 ## Installation
 
@@ -128,7 +129,7 @@ Run these from this directory. `make help` prints the same list.
 
 `FORCE=1` rebuilds even when inputs have not changed. `KEEP=1` leaves the generated compile files on disk. `CONSUMABLES=1`, `TRACE=1`, `CLEANUP=1`, and `SOUNDS=1` enable the optional features. Example: `make models ONLY=hunter FORCE=1`.
 
-Unchanged files are skipped. Another addon that ships its own `models/infected/*.mdl` will fight this one. Only one of them wins.
+Unchanged files are skipped. The packed addon does not contain `models/infected/*.mdl`, so it does not trip the server consistency check on those files.
 
 ## In game
 
@@ -150,4 +151,5 @@ Shots use the tracers the game already draws, recolored to **255, 0, 128**, from
 
 - When the spitter plays the spitting animation, it's model lies flat on the ground. Oddly enough, this seems to be true to the hitbox so it might be a win. Similar case with the Jockey when it's riding a survivor.
 - Some backdrops make it hard to see infected. Also, proxy textures, like text on walls, usually have a higher priority than the override materials, so they can obscure the infected. The client settings applied at startup turn off the post-processing that makes this worse.
+- Map corpse props use the body-pile materials (`bp*`, including `bp_body_include` / `bp_head_include`). Those stay stock. Live commons use `cim_*` / `cif_*` and stay flat.
 
