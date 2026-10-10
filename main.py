@@ -3,12 +3,14 @@
 Examples:
     python main.py index                 # map every infected material to a class
     python main.py materials             # phase 1: flat x-ray colours
-    python main.py models --only hunter  # phase 2: hitbox proxy mesh for one model
-    python main.py all                   # index + materials + models + pack + deploy
+    python main.py models --only hunter --feat-hitbox-models  # phase 2: one proxy mesh
+    python main.py all                   # index + materials + pack + deploy (materials only)
+    python main.py all --feat-hitbox-models
     python main.py all --feat-override-consumables
     python main.py all --feat-trace
     python main.py all --feat-cleanup
     python main.py all --feat-sounds
+    python main.py all --feat-map-retex
     python main.py deploy --loose        # fast iteration, no VPK repack
     python main.py verify --only hunter  # open the result in HLMV
 """
@@ -151,6 +153,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--keep-work", action="store_true", help="keep generated QC/SMD and studiomdl logs")
     parser.add_argument("--hlmv", action="store_true", help="also open the model viewer during verify")
     parser.add_argument(
+        "--feat-hitbox-models",
+        action="store_true",
+        help="also pack infected hitbox proxy meshes (skipped on model-consistency servers)",
+    )
+    parser.add_argument(
         "--feat-override-consumables",
         action="store_true",
         help="also pack medkits, pills, throwables, and ammo packs",
@@ -169,6 +176,11 @@ def main(argv: list[str] | None = None) -> int:
         "--feat-sounds",
         action="store_true",
         help="also convert and install custom sounds from config.json",
+    )
+    parser.add_argument(
+        "--feat-map-retex",
+        action="store_true",
+        help="replace world materials listed in map_materials_batch_retextures",
     )
     args = parser.parse_args(argv)
 

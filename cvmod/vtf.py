@@ -114,6 +114,32 @@ def build(color: tuple[int, int, int], alpha: int = 255, size: int = DEFAULT_SIZ
     return _assemble(size, size, DEFAULT_FLAGS, (r, g, b), mips)
 
 
+def build_image(rgba: np.ndarray) -> bytes:
+    """Encode a square power-of-two RGBA image (top row first) as a VTF."""
+    if rgba.ndim != 3 or rgba.shape[2] != 4:
+        raise ValueError(f"expected HxWx4 image, got {rgba.shape}")
+    height, width = int(rgba.shape[0]), int(rgba.shape[1])
+    if height != width or height < 1 or (height & (height - 1)):
+        raise ValueError(f"VTF image must be square and a power of two, got {width}x{height}")
+    image = np.ascontiguousarray(rgba, dtype=np.uint8)
+    mips: list[bytes] = []
+    level = image
+    while True:
+        bgra = level[:, :, [2, 1, 0, 3]]
+        mips.append(bgra.tobytes())
+        if level.shape[0] == 1:
+            break
+        level = (
+            level.astype(np.uint16)
+            .reshape(level.shape[0] // 2, 2, level.shape[1] // 2, 2, 4)
+            .mean(axis=(1, 3))
+            .astype(np.uint8)
+        )
+    mips.reverse()
+    reflect = tuple(int(v) for v in image[:, :, :3].reshape(-1, 3).mean(axis=0))
+    return _assemble(width, height, DEFAULT_FLAGS, reflect, mips)
+
+
 def write(path: Path, color: tuple[int, int, int], alpha: int = 255, size: int = DEFAULT_SIZE) -> bytes:
     data = build(color, alpha=alpha, size=size)
     path.parent.mkdir(parents=True, exist_ok=True)

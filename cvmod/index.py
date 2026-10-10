@@ -229,9 +229,9 @@ def build() -> Index:
             continue
         _claim(index, key, "consumable", "directory", None)
 
-    # Drop materials that decorative corpse props share with live commons.
-    # Those stay stock so map body piles do not turn into class colours; live
-    # commons still read as flat colours via their proxy meshes.
+    # Drop corpse-exclusive materials (body-pile bp* textures, etc.). Materials
+    # that corpse props reuse from a live infected stay indexed so materials-only
+    # builds still recolor that class.
     shared = deadbodies.shared_infected_materials()
     if shared:
         index.materials = {

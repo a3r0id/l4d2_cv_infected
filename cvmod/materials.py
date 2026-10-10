@@ -162,27 +162,41 @@ def build(
         if cls != "consumable"
     )
 
-    # Shared flat texture plus the material the phase 2 proxy meshes point at,
-    # one pair per infected class. Most consumables keep stock textures.
+    # Shared flat texture per infected class. Proxy materials (for hitbox meshes)
+    # are optional and only written with --feat-hitbox-models.
     for cls in used_classes:
         color = config.CLASS_COLORS.get(cls, (255, 255, 255))
         texture = out_materials / f"{flat_texture_ref(cls)}.vtf"
-        proxy_vmt = out_materials / f"{config.FLAT_MATERIAL_DIR}/proxy_{cls}.vmt"
         unit = f"materials/_flat/{cls}"
 
         data = vtf.build(color)
-        proxy_text = _render_vmt(
-            {"$basetexture": flat_texture_ref(cls), **config.RENDER_FLAGS}
-        )
-        key = manifest.sha(GENERATOR_VERSION, repr(color), data, proxy_text)
-        if not force and mani.is_current(unit, key) and texture.exists() and proxy_vmt.exists():
+        key = manifest.sha(GENERATOR_VERSION, "flat-tex", repr(color), data)
+        if not force and mani.is_current(unit, key) and texture.exists():
             mani.touch(unit)
             result.stats.skipped += 1
-            continue
-        manifest.write_if_changed(texture, data)
-        manifest.write_if_changed(proxy_vmt, proxy_text.encode("utf-8"))
-        mani.record(unit, key, [texture, proxy_vmt])
-        result.stats.written += 1
+        else:
+            manifest.write_if_changed(texture, data)
+            mani.record(unit, key, [texture])
+            result.stats.written += 1
+
+        if features.hitbox_models:
+            proxy_vmt = out_materials / f"{config.FLAT_MATERIAL_DIR}/proxy_{cls}.vmt"
+            proxy_unit = f"materials/_proxy/{cls}"
+            proxy_text = _render_vmt(
+                {"$basetexture": flat_texture_ref(cls), **config.RENDER_FLAGS}
+            )
+            proxy_key = manifest.sha(GENERATOR_VERSION, "proxy-vmt", repr(color), proxy_text)
+            if (
+                not force
+                and mani.is_current(proxy_unit, proxy_key)
+                and proxy_vmt.exists()
+            ):
+                mani.touch(proxy_unit)
+                result.stats.skipped += 1
+            else:
+                manifest.write_if_changed(proxy_vmt, proxy_text.encode("utf-8"))
+                mani.record(proxy_unit, proxy_key, [proxy_vmt])
+                result.stats.written += 1
 
     if features.consumables:
         gold = config.EXPLOSIVE_AMMO_COLOR
@@ -317,6 +331,13 @@ def build(
         _write_lightwarp(mani, force, result)
         if features.trace:
             _write_client_tracers(mani, force, result)
+        if features.map_retex:
+            from . import mapretex
+
+            wrote, unchanged, failed = mapretex.write(mani, force=force)
+            result.stats.written += wrote
+            result.stats.skipped += unchanged
+            result.stats.failed += failed
 
     if not only:
         # Must run after every unit above has been touched or recorded.
@@ -324,6 +345,16 @@ def build(
         removed = mani.prune("materials/")
         if not features.trace:
             removed.extend(mani.prune("scripts/"))
+        if not features.hitbox_models:
+            removed.extend(mani.prune("models/"))
+            # Older builds recorded proxy VMTs on the flat unit; drop orphans.
+            proxy_dir = out_materials / config.FLAT_MATERIAL_DIR
+            if proxy_dir.exists():
+                for path in sorted(proxy_dir.glob("proxy_*.vmt")):
+                    if path.name == "proxy_consumable.vmt":
+                        continue
+                    path.unlink()
+                    removed.append(path)
         result.stats.removed = len(removed)
 
     return result

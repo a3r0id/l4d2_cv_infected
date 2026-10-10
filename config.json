@@ -225,7 +225,8 @@
         "dest": [
             "left4dead2/sound/level/bell_impact.wav",
             "left4dead2/sound/level/bell_normal.wav",
-            "left4dead2/sound/level/timer_bell.wav"
+            "left4dead2/sound/level/timer_bell.wav",
+            "left4dead2/sound/level/scoreregular.wav"
         ]
     },
     "round_complete": {
@@ -241,26 +242,52 @@
             "left4dead2/sound/player/survivor/heal/bandaging_1.wav"
         ]
     },
-    "tank": {
+    "get_upgrade": {
         "src": "data/sounds/daddys-home.mp3",
         "dest": [
-            "left4dead2/sound/player/tank/voice/yell/tank_yell_01.wav",
-            "left4dead2/sound/player/tank/voice/yell/tank_yell_02.wav",
-            "left4dead2/sound/player/tank/voice/yell/tank_yell_03.wav",
-            "left4dead2/sound/player/tank/voice/yell/tank_yell_04.wav",
-            "left4dead2/sound/player/tank/voice/yell/tank_yell_05.wav",
-            "left4dead2/sound/player/tank/voice/yell/tank_yell_06.wav",
-            "left4dead2/sound/player/tank/voice/yell/tank_yell_07.wav",
-            "left4dead2/sound/player/tank/voice/yell/tank_yell_08.wav",
-            "left4dead2/sound/player/tank/voice/yell/tank_yell_09.wav",
-            "left4dead2/sound/player/tank/voice/yell/tank_yell_10.wav",
-            "left4dead2/sound/player/tank/voice/yell/tank_yell_11.wav",
-            "left4dead2/sound/player/tank/voice/yell/tank_yell_12.wav",
-            "left4dead2/sound/player/tank/voice/yell/tank_yell_13.wav",
-            "left4dead2/sound/player/tank/voice/yell/tank_yell_14.wav",
-            "left4dead2/sound/player/tank/voice/yell/tank_yell_15.wav",
-            "left4dead2/sound/player/tank/voice/yell/tank_yell_16.wav"
+            "left4dead2/sound/player/orch_hit_csharp_short.wav"
         ]
+    },
+    "critical_event": {
+      "src": "data/sounds/oh-my-god-bro-oh-hell-nah-man.mp3",
+      "dest": [
+          "left4dead2/sound/ui/critical_event_1.wav"
+      ]
+    }    
+  },
+
+  "map_materials_batch_retextures": [
+    {
+      "dir": "pak01://materials/buildings",
+      "replace": "data/textures_raw/default.png"
+    },
+    {
+      "dir": "pak01://materials/concrete",
+      "replace": "data/textures_raw/default.png"
+    },
+    {
+      "dir": "pak01://materials/brick",
+      "replace": "data/textures_raw/default.png"
+    },
+    {
+      "dir": "pak01://materials/carpet",
+      "replace": "data/textures_raw/default.png"
+    },
+    {
+      "dir": "pak01://materials/brick",
+      "replace": "data/textures_raw/default.png"
+    },
+    {
+      "dir": "pak01://materials/nature",
+      "replace": "data/textures_raw/default.png"
+    },
+    {
+      "dir": "pak01://materials/metal",
+      "replace": "data/textures_raw/default.png"
+    },
+    {
+      "dir": "pak01://materials/wallpaper",
+      "replace": "data/textures_raw/default.png"
     }
-  }
+  ]
 }

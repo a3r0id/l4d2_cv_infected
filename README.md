@@ -8,13 +8,17 @@ My initial goal was to make the infected easier to see for a computer vision pro
 
 | Feature | Flag | Regular server | Addon server | `sv_cheats 1` |
 | ------- | ---- | :------------: | :----------: | :-----------: |
-| Infected hitbox X-ray (color per class) | core | ✗ | ✓ | ✓ |
-| Spitter puddles and smoker tongue X-ray | core | ✗ | ✓ | ✓ |
-| Consumable pickups X-ray (stock textures, brightened) | `--feat-override-consumables` | ✗ | ✓ | ✓ |
+| Infected material X-ray (color per class) | core | ✗ | ✓* | ✓ |
+| Spitter puddles and smoker tongue X-ray | core | ✗ | ✓* | ✓ |
+| Infected hitbox proxy meshes | `--feat-hitbox-models` | ✗ | ✓* | ✓ |
+| Consumable pickups X-ray (stock textures, brightened) | `--feat-override-consumables` | ✗ | ✓* | ✓ |
 | Recolored client bullet tracers + capture HUD/view settings | `--feat-trace` | ✗ | ✓ | ✓ |
 | Scripted 3D shot beams (`mapspawn_addon.nut`) | `--feat-trace` | ✗ | ✗ | ✓ |
 | Cap ragdolls/decals; C clears clutter | `--feat-cleanup` | ✓ | ✓ | ✓ |
 | Custom sound replacements from `config.json` | `--feat-sounds` | ✓ | ✓ | ✓ |
+| Flat world materials (buildings, concrete, brick) | `--feat-map-retex` | ✗ | ✓* | ✓ |
+
+\* Servers with `sv_consistency 1` still kick for infected material overrides. The kick often names `models/infected/hunter.mdl` (etc.) even when the addon only ships `.vmt`/`.vtf` and no custom `.mdl`. Hitbox proxies make that worse, but skipping `--feat-hitbox-models` does not bypass consistency.
 
 **Regular server** = official or stock public server that blocks client addons. 
 **Addon server** = allows custom client VPKs (many custom/community servers). 
@@ -56,19 +60,17 @@ Colors and other tunables live in `config.json` (`class_colors`, `tracer_color`,
 
 ## What gets replaced
 
-1. **Materials.** Every infected VMT is replaced with a flat `VertexLitGeneric` material (`$ignorez`, `$nocull`, `$nofog`, variation disabled, self-illuminated). They draw through walls and ignore fog. With `--feat-override-consumables`, most pickup materials keep their stock textures, get `$ignorez`, and are brightened via `consumable_brightness`; explosive ammo packs become flat bright gold (`explosive_ammo_color`).
-2. **Meshes.** The stock infected mesh is kept. Servers consistency-check `models/infected/*.mdl` and disconnect if the file differs (`hunter_l4d1.mdl` and the rest). The flat materials are what recolor that stock mesh. Proxy hitbox meshes are still built locally for checks, and they are not packed into the addon.
+1. **Materials (core).** Every infected VMT is replaced with a flat `VertexLitGeneric` material (`$ignorez`, `$nocull`, `$nofog`, variation disabled, self-illuminated). They draw through walls and ignore fog. With `--feat-override-consumables`, most pickup materials keep their stock textures, get `$ignorez`, and are brightened via `consumable_brightness`; explosive ammo packs become flat bright gold (`explosive_ammo_color`).
+2. **Meshes (optional).** With `--feat-hitbox-models`, each infected model that has hitboxes and shared animations is replaced with a box mesh of those hitboxes. The proxy uses the class colour and draws through walls. Models that only exist to play animations, and loose gibs that carry their own sequences, keep their original mesh and get the flat material instead. Omit this flag on servers that consistency-check model files.
 3. **Shots.** With `--feat-trace`, each survivor bullet becomes a beam from the eyes to the server impact. A hit ends on the hitbox. A miss ends on the world. Grenades, molotovs, pipe bombs, and bile jars get the same beam while they fly. Beams last 0.5 seconds and use the tracer color.
 
-Models that only exist to play animations, and loose gibs that carry their own sequences, keep their original mesh and get the flat material instead.
-
-L4D1 campaigns and The Sacrifice spawn `hunter_l4d1`, `smoker_l4d1`, `boomer_l4d1`, and `hulk_l4d1` (some Sacrifice maps use `hulk_dlc3`). Their materials are recolored the same way. The model files themselves are not replaced, so a consistency check on those names does not fail.
+L4D1 campaigns and The Sacrifice spawn `hunter_l4d1`, `smoker_l4d1`, `boomer_l4d1`, and `hulk_l4d1` (some Sacrifice maps use `hulk_dlc3`). With `--feat-hitbox-models`, those models are replaced with the same hitbox proxies when they have shared animations.
 
 ## Installation
 
 *If you only need the core overrides then simply move [the VPK addon](https://github.com/a3r0id/l4d2_cv_infected/blob/main/dist/cv_infected.vpk) to path/to/your/L4D2/addons/cv_infected.vpk.*
 
-Build and install the core infected overrides with:
+Build and install the core infected material overrides with:
 
 ```
 make
@@ -77,21 +79,24 @@ make
 Optional features:
 
 ```
+make HITBOX_MODELS=1
 make CONSUMABLES=1
 make TRACE=1
 make CLEANUP=1
 make SOUNDS=1
-make CONSUMABLES=1 TRACE=1 CLEANUP=1 SOUNDS=1
+make MAP_RETEX=1
+make HITBOX_MODELS=1 CONSUMABLES=1 TRACE=1 CLEANUP=1 SOUNDS=1
 ```
 
 Or with `main.py`:
 
 ```
+python main.py all --feat-hitbox-models
 python main.py all --feat-override-consumables
 python main.py all --feat-trace
 python main.py all --feat-cleanup
 python main.py all --feat-sounds
-python main.py all --feat-override-consumables --feat-trace --feat-cleanup --feat-sounds
+python main.py all --feat-hitbox-models --feat-override-consumables --feat-trace --feat-cleanup --feat-sounds
 ```
 
 That finds the Steam install of Left 4 Dead 2, packs `dist/cv_infected.vpk`, and copies it to that install's `left4dead2/addons/` folder. Each deploy overwrites the previous addon and removes loose client cfg hooks / custom sounds that the selected features do not need. Enable **CV Infected Override** under Extras, then Add-ons.
@@ -115,10 +120,10 @@ Run these from this directory. `make help` prints the same list.
 
 | Command                   | What it does                                                                |
 | ------------------------- | --------------------------------------------------------------------------- |
-| `make`                    | Full rebuild: index, materials, models, pack, and deploy (infected only)    |
+| `make`                    | Full rebuild: index, materials, models, pack, and deploy (materials only)   |
 | `make colors`             | Rebuild colours, pack, and deploy. Use this after editing `config.json`     |
 | `make materials`          | Flat colours for the selected features                                      |
-| `make models ONLY=hunter` | One proxy mesh                                                              |
+| `make models ONLY=hunter HITBOX_MODELS=1` | One proxy mesh                                                    |
 | `make pack`               | Write `dist/cv_infected.vpk`                                                |
 | `make deploy`             | Fresh-install that VPK into the game's `left4dead2/addons/`                 |
 | `make loose`              | Deploy an unpacked `addons/cv_infected/` folder                             |
@@ -127,9 +132,9 @@ Run these from this directory. `make help` prints the same list.
 | `make help`               | Print the targets                                                           |
 
 
-`FORCE=1` rebuilds even when inputs have not changed. `KEEP=1` leaves the generated compile files on disk. `CONSUMABLES=1`, `TRACE=1`, `CLEANUP=1`, and `SOUNDS=1` enable the optional features. Example: `make models ONLY=hunter FORCE=1`.
+`FORCE=1` rebuilds even when inputs have not changed. `KEEP=1` leaves the generated compile files on disk. `HITBOX_MODELS=1`, `CONSUMABLES=1`, `TRACE=1`, `CLEANUP=1`, `SOUNDS=1`, and `MAP_RETEX=1` enable the optional features. Example: `make models ONLY=hunter HITBOX_MODELS=1 FORCE=1`.
 
-Unchanged files are skipped. The packed addon does not contain `models/infected/*.mdl`, so it does not trip the server consistency check on those files.
+Unchanged files are skipped. Core packs material overrides only. With `HITBOX_MODELS=1`, the addon also includes hitbox proxy models under `models/infected/`. Neither mode passes `sv_consistency 1` servers that check infected assets — the kick message can still say `hunter.mdl` for a materials-only pack.
 
 ## In game
 
@@ -143,6 +148,8 @@ With `CLEANUP=1` / `--feat-cleanup`, deploy writes `left4dead2/cfg/cv_cleanup.cf
 
 With `SOUNDS=1` / `--feat-sounds`, deploy converts each entry under `custom_sound_generator` in `config.json` (MP3 via ffmpeg) to 16-bit 44.1 kHz WAV and writes the listed destinations under the game install. Without the flag, those loose overrides are deleted so the stock VPK sounds return. Needs `ffmpeg` on PATH.
 
+With `MAP_RETEX=1` / `--feat-map-retex`, each entry in `map_materials_batch_retextures` replaces every material under that `pak01://` folder with an unlit material using the PNG in `replace`. Buildings, concrete, and brick become that texture. Props and other folders stay stock. Without the flag, those overrides are left out of the addon.
+
 Shots use the tracers the game already draws, recolored to **255, 0, 128**, from the muzzle to the impact. First-person tracers are off until `cv_client.cfg` runs.
 
 
@@ -151,5 +158,5 @@ Shots use the tracers the game already draws, recolored to **255, 0, 128**, from
 
 - When the spitter plays the spitting animation, it's model lies flat on the ground. Oddly enough, this seems to be true to the hitbox so it might be a win. Similar case with the Jockey when it's riding a survivor.
 - Some backdrops make it hard to see infected. Also, proxy textures, like text on walls, usually have a higher priority than the override materials, so they can obscure the infected. The client settings applied at startup turn off the post-processing that makes this worse.
-- Map corpse props use the body-pile materials (`bp*`, including `bp_body_include` / `bp_head_include`). Those stay stock. Live commons use `cim_*` / `cif_*` and stay flat.
+- Map corpse props use the body-pile materials (`bp*`, including `bp_body_include` / `bp_head_include`). Those stay stock. Live commons use `cim_*` / `cif_*` and stay flat. Props that reuse a live special's material (lynched charger → `charger_diffuse`) get the flat colour too so the live infected still recolors without hitbox proxies.
 

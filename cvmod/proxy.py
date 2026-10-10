@@ -293,6 +293,12 @@ def build(
 ) -> Result:
     result = Result()
     features = features or Features()
+    if not features.hitbox_models:
+        if not only:
+            removed = mani.prune("models/")
+            result.stats.removed = len(removed)
+        return result
+
     work_root = config.WORK / "qc"
     work_root.mkdir(parents=True, exist_ok=True)
     logs_root = config.WORK / "logs"

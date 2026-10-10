@@ -20,6 +20,8 @@ CLEANUP_RESTORE_CFG_NAME = "cv_cleanup_restore.cfg"
 
 def addoninfo_text(features: Features) -> str:
     parts = ["infected"]
+    if features.hitbox_models:
+        parts.append("hitboxes")
     if features.consumables:
         parts.append("consumables")
     if features.trace:
@@ -28,10 +30,14 @@ def addoninfo_text(features: Features) -> str:
         parts.append("cleanup")
     if features.sounds:
         parts.append("sounds")
+    if features.map_retex:
+        parts.append("mapretex")
     tag = ", ".join(parts)
     desc = (
         "Replaces infected materials with flat, depth-ignoring colours for computer vision."
     )
+    if features.hitbox_models:
+        desc += " Replaces infected meshes with hitbox proxy models."
     if features.consumables:
         desc += " Pickups are x-rayed; explosive ammo packs are bright gold."
     if features.trace:
@@ -40,6 +46,8 @@ def addoninfo_text(features: Features) -> str:
         desc += " Caps ragdolls/decals; C clears clutter."
     if features.sounds:
         desc += " Ships custom sound replacements."
+    if features.map_retex:
+        desc += " Flattens selected world materials to a single texture."
     weapon = "1" if features.consumables else "0"
     return f"""\
 "AddonInfo"

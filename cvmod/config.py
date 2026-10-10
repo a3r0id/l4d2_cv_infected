@@ -159,6 +159,31 @@ SMOKER_TONGUE_MATERIALS: tuple[str, ...] = tuple(
     str(m) for m in _USER["smoker_tongue_materials"]
 )
 
+def _pak_material_prefix(value: str) -> str:
+    """`pak01://materials/buildings` -> `buildings` (path under materials/)."""
+    text = str(value).replace("\\", "/").strip()
+    if "://" in text:
+        text = text.split("://", 1)[1]
+    text = text.strip("/").lower()
+    if text.startswith("materials/"):
+        text = text[len("materials/") :]
+    return text.strip("/")
+
+
+# (materials/ prefix, png path relative to the repo). Used with --feat-map-retex.
+MAP_RETEXTURES: tuple[tuple[str, str], ...] = tuple(
+    (_pak_material_prefix(item["dir"]), str(item["replace"]))
+    for item in (_USER.get("map_materials_batch_retextures") or [])
+)
+
+
+def is_map_retexture_material(key: str) -> bool:
+    k = key.replace("\\", "/").strip("/").lower()
+    if k.startswith("materials/"):
+        k = k[len("materials/") :]
+    return any(k == prefix or k.startswith(prefix + "/") for prefix, _ in MAP_RETEXTURES)
+
+
 # name -> {src, dest[]}. Installed into the game tree with --feat-sounds.
 CUSTOM_SOUND_GENERATOR: dict[str, dict] = {
     str(name): {

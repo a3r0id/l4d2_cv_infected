@@ -5,9 +5,10 @@ and `bphf_*` textures. Those VMTs are patches of `bp_body_include` /
 `bp_head_include`, so the include has to stay stock or every pile turns flat.
 Live commons use `cim_*` / `cif_*` instead.
 
-We also scan deadbodies MDLs for any other infected materials they reference
-(charger lynched, fallen survivor, CEDA faceplate, etc.). Live commons still
-get flat colour from their own materials and proxy meshes.
+Deadbody MDLs sometimes reuse a live special's material (the lynched charger
+prop uses `charger_diffuse`). Those stay in the override set so materials-only
+builds still recolor the live infected; only corpse-exclusive materials are
+left stock.
 """
 
 from __future__ import annotations
@@ -19,7 +20,7 @@ from pathlib import Path
 from . import config, mdl, vpkutil
 
 CACHE_NAME = "deadbody_shared_materials.json"
-CACHE_VERSION = 3
+CACHE_VERSION = 4
 
 # Body-pile textures. Live commons use cim_/cif_ and never these.
 # bp_body_include / bp_head_include are the patch parents every pile VMT
@@ -121,8 +122,24 @@ def _discover_from_deadbody_models() -> set[str]:
     return shared
 
 
+def _live_infected_material_keys() -> set[str]:
+    """Materials referenced by live models under models/infected/."""
+    root = config.SRC_INFECTED_MODELS
+    if not root.exists():
+        return set()
+    keys: set[str] = set()
+    for path in root.rglob("*.mdl"):
+        keys |= _material_keys_for_model(path)
+    return keys
+
+
 def _discover() -> set[str]:
-    return _corpse_texture_keys_from_src() | _discover_from_deadbody_models()
+    # Body-pile textures always stay stock. Materials that corpse props share
+    # with a live infected model must still be overridden — otherwise a
+    # materials-only addon leaves that special looking stock (e.g. charger).
+    corpse_only = _corpse_texture_keys_from_src()
+    from_props = _discover_from_deadbody_models() - _live_infected_material_keys()
+    return corpse_only | from_props
 
 
 @lru_cache(maxsize=1)

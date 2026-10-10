@@ -111,6 +111,11 @@ def run(
         and k not in puddle
         and k not in tongue
         and not (features.trace and (k in tracers or k in shot_sprite))
+        and not (features.map_retex and config.is_map_retexture_material(k))
+        and not (
+            features.map_retex
+            and k.startswith(config.FLAT_MATERIAL_DIR + "/map_")
+        )
     )
     report.add(
         "no materials outside the selected features",
@@ -163,6 +168,18 @@ def run(
             ref = params.get("$basetexture", "").strip().strip('"').replace("\\", "/")
             if ref.lower() != tracer_texture:
                 tracer_bad.append(f"{key} -> {ref or '<none>'}")
+            continue
+        if config.is_map_retexture_material(key) or key.startswith(
+            config.FLAT_MATERIAL_DIR + "/map_"
+        ):
+            if not features.map_retex:
+                dangling.append(f"{key} present without --feat-map-retex")
+            continue
+        if Path(key).name.startswith("proxy_") and key.startswith(
+            config.FLAT_MATERIAL_DIR + "/"
+        ):
+            if not features.hitbox_models:
+                dangling.append(f"{key} present without --feat-hitbox-models")
             continue
         if config.is_consumable_material(key):
             if not features.consumables:
@@ -286,7 +303,18 @@ def run(
             "" if scripts_clean else "cfg/ or scripts/ leftovers still in build/",
         )
 
-    _check_models(report, idx, built)
+    if features.hitbox_models:
+        _check_models(report, idx, built)
+    else:
+        root = config.BUILD / "models"
+        leftovers = sorted(root.rglob("*.mdl")) if root.exists() else []
+        report.add(
+            "hitbox proxy models omitted without --feat-hitbox-models",
+            not leftovers,
+            ""
+            if not leftovers
+            else f"{len(leftovers)} model(s) still in build/models",
+        )
     return report
 
 

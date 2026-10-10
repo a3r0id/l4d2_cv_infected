@@ -1,10 +1,12 @@
 """Optional addon features selected at pack/deploy time.
 
-Core (default) ships only the infected material and proxy overrides.
+Core (default) ships only the infected material overrides.
+`--feat-hitbox-models` adds hitbox proxy meshes (rejected by model-consistency servers).
 `--feat-override-consumables` x-rays stock pickup textures (slightly brightened).
 `--feat-trace` adds cheat-only shot scripts, capture cfg, and client tracer hooks.
 `--feat-cleanup` adds an autoexec patch that caps ragdolls/decals and binds C to clear clutter.
 `--feat-sounds` converts and installs custom sounds from config.json.
+`--feat-map-retex` flattens world materials listed in `map_materials_batch_retextures`.
 """
 
 from __future__ import annotations
@@ -17,13 +19,17 @@ from . import config
 
 @dataclass(frozen=True)
 class Features:
+    hitbox_models: bool = False
     consumables: bool = False
     trace: bool = False
     cleanup: bool = False
     sounds: bool = False
+    map_retex: bool = False
 
     def label(self) -> str:
         parts = ["infected"]
+        if self.hitbox_models:
+            parts.append("hitboxes")
         if self.consumables:
             parts.append("consumables")
         if self.trace:
@@ -32,6 +38,8 @@ class Features:
             parts.append("cleanup")
         if self.sounds:
             parts.append("sounds")
+        if self.map_retex:
+            parts.append("mapretex")
         return "+".join(parts)
 
 
@@ -50,10 +58,12 @@ TRACE_FLAT_STEMS: frozenset[str] = frozenset({"flat_tracer"})
 
 def from_args(args) -> Features:
     return Features(
+        hitbox_models=bool(getattr(args, "feat_hitbox_models", False)),
         consumables=bool(getattr(args, "feat_override_consumables", False)),
         trace=bool(getattr(args, "feat_trace", False)),
         cleanup=bool(getattr(args, "feat_cleanup", False)),
         sounds=bool(getattr(args, "feat_sounds", False)),
+        map_retex=bool(getattr(args, "feat_map_retex", False)),
     )
 
 
@@ -87,6 +97,22 @@ def is_consumable_build_path(rel: str) -> bool:
     return False
 
 
+def is_hitbox_model_build_path(rel: str) -> bool:
+    """Proxy meshes and the materials only those meshes reference."""
+    rel = _norm(rel)
+    if rel.startswith("models/infected/"):
+        return True
+    key = _material_key(rel)
+    if key is None:
+        return False
+    name = Path(key).name
+    return (
+        key.startswith(config.FLAT_MATERIAL_DIR + "/")
+        and name.startswith("proxy_")
+        and name != "proxy_consumable"
+    )
+
+
 def is_trace_build_path(rel: str) -> bool:
     rel = _norm(rel)
     if any(rel == p or rel.startswith(p) for p in TRACE_PREFIXES):
@@ -100,24 +126,23 @@ def is_trace_build_path(rel: str) -> bool:
     return stem in TRACE_FLAT_STEMS
 
 
-_MODEL_SUFFIXES = (".mdl", ".vvd", ".vtx", ".phy", ".ani")
-
-
-def is_packed_model(rel: str) -> bool:
-    """Studio files under models/. Servers consistency-check these and disconnect."""
-    rel = _norm(rel)
-    return rel.startswith("models/") and rel.endswith(_MODEL_SUFFIXES)
-
-
 def include_build_path(rel: str, features: Features) -> bool:
     """Whether a path under build/ belongs in the staged addon."""
-    # Replacing models/infected/*.mdl fails sv_consistency ("enforcing consistency
-    # for this file"). Flat materials recolor the stock mesh without that check.
-    if is_packed_model(rel):
+    if is_hitbox_model_build_path(rel) and not features.hitbox_models:
         return False
     if is_consumable_build_path(rel) and not features.consumables:
         return False
     if is_trace_build_path(rel) and not features.trace:
+        return False
+    key = _material_key(rel)
+    if key is not None and config.is_map_retexture_material(key) and not features.map_retex:
+        return False
+    if (
+        key is not None
+        and Path(key).name.startswith("map_")
+        and key.startswith(config.FLAT_MATERIAL_DIR + "/")
+        and not features.map_retex
+    ):
         return False
     return True
 
